@@ -609,10 +609,13 @@ func setup_animation_tree(params: Dictionary) -> Dictionary:
 	if not ap_node or not ap_node is AnimationPlayer:
 		return {"success": false, "error": "AnimationPlayer not found at: " + player_path}
 
-	var tree = AnimationTree.new()
-	tree.name = tree_name
-	parent.add_child(tree)
-	tree.owner = root
+	# Reuse an existing AnimationTree with this name if present, else create one
+	var tree = parent.get_node_or_null(tree_name)
+	if not tree or not tree is AnimationTree:
+		tree = AnimationTree.new()
+		tree.name = tree_name
+		parent.add_child(tree)
+		tree.owner = root
 
 	# Set anim_player using a relative path from tree to player
 	tree.anim_player = tree.get_path_to(ap_node)
@@ -658,7 +661,8 @@ func add_state_to_machine(params: Dictionary) -> Dictionary:
 		return {"success": false, "error": "AnimationTree not found at: " + tree_path}
 
 	if not tree.tree_root is AnimationNodeStateMachine:
-		return {"success": false, "error": "tree_root is not an AnimationNodeStateMachine (it's %s)" % tree.tree_root.get_class()}
+		var root_class = tree.tree_root.get_class() if tree.tree_root != null else "null"
+		return {"success": false, "error": "tree_root is not an AnimationNodeStateMachine (it's %s)" % root_class}
 
 	var sm: AnimationNodeStateMachine = tree.tree_root
 
