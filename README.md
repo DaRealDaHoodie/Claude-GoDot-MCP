@@ -10,7 +10,7 @@ Tell Claude "build a full 2D platformer with double-jump, 3 enemy types, coins, 
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude direct, real-time control over the Godot editor:
 
-- **155 tools** covering every aspect of Godot development
+- **170 tools** covering every aspect of Godot development
 - **Scene & node operations** — create, edit, save, delete, reorder, rename, bake navigation
 - **Script operations** — create, edit, attach GDScript files
 - **Signal wiring** — connect/disconnect signals between nodes programmatically
@@ -136,7 +136,7 @@ Create an NPC interaction system:
 
 ---
 
-## Tool Reference (155 tools)
+## Tool Reference (170 tools)
 
 ### Scene Operations
 | Tool | Description |
@@ -404,6 +404,33 @@ Create an NPC interaction system:
 | `connect_states` | Add a transition between two states (immediate/sync/at_end) |
 | `set_blend_parameter` | Set `parameters/xxx` on an AnimationTree (blend positions, etc.) |
 | `travel_to_state` | Call `playback.travel(target)` to transition to a state at runtime |
+
+### Skeleton
+| Tool | Description |
+|------|-------------|
+| `get_skeleton_bones` | List all Skeleton3D bones: name, parent index, rest/pose transforms, global pose position, enabled state |
+| `set_bone_pose` | Set pose position, rotation (Euler degrees or quaternion), and/or scale on a bone by name or index |
+| `reset_skeleton_pose` | Reset all bone poses to the skeleton's rest pose (clear procedural/manual posing) |
+
+### Batch Extras
+| Tool | Description |
+|------|-------------|
+| `batch_attach_script` | Attach a GDScript to all nodes matching a type and/or group filter, with optional overwrite |
+| `batch_rename_nodes` | Find & replace in node names (regex or string) across a scene subtree |
+| `move_and_rename_file` | Move/rename a file within the project (res:// paths); triggers filesystem scan |
+| `pack_scene` | Save a node and its children as a standalone .tscn PackedScene file |
+| `create_resource_file` | Create any Godot Resource (.tres) by class name with optional initial properties |
+
+### Project Utilities
+| Tool | Description |
+|------|-------------|
+| `assert_fps_above` | Sample FPS over N frames and assert average meets a threshold; returns avg/min/max |
+| `get_renderer_info` | GPU adapter name/vendor, API version, VRAM usage, screen size, Godot version |
+| `assert_resource_valid` | Verify a res:// resource exists and loads without errors |
+| `get_node_global_transform` | Get world-space position, rotation (degrees), and scale of Node3D or Node2D |
+| `set_node_global_transform` | Set world-space position, rotation (degrees), and/or scale of Node3D or Node2D |
+| `toggle_feature_tag` | Add or remove a custom feature tag in Project Settings (query via OS.has_feature()) |
+| `set_node_metadata` | Set or remove metadata on a node (persists in .tscn; read at runtime with node.get_meta()) |
 
 ---
 

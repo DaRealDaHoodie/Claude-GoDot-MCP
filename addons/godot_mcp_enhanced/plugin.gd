@@ -19,6 +19,9 @@ const TilemapOperations = preload("res://addons/godot_mcp_enhanced/tilemap_opera
 const BatchOperations = preload("res://addons/godot_mcp_enhanced/batch_operations.gd")
 const AnimationExtras = preload("res://addons/godot_mcp_enhanced/animation_extras.gd")
 const QAValidationOperations = preload("res://addons/godot_mcp_enhanced/qa_validation_operations.gd")
+const SkeletonOperations = preload("res://addons/godot_mcp_enhanced/skeleton_operations.gd")
+const BatchExtras = preload("res://addons/godot_mcp_enhanced/batch_extras.gd")
+const ProjectUtils = preload("res://addons/godot_mcp_enhanced/project_utils.gd")
 
 var http_server: Node
 var screenshot_manager: Node
@@ -38,6 +41,9 @@ var tilemap_operations: Node
 var batch_operations: Node
 var animation_extras: Node
 var qa_validation_operations: Node
+var skeleton_operations: Node
+var batch_extras: Node
+var project_utils: Node
 
 var bottom_panel: Control
 var config: Dictionary = {}
@@ -140,6 +146,21 @@ func _enter_tree() -> void:
 	qa_validation_operations.debugger_ref = debugger_integration  # pass error log reference
 	add_child(qa_validation_operations)
 
+	skeleton_operations = SkeletonOperations.new()
+	skeleton_operations.name = "MCPSkeletonOperations"
+	skeleton_operations.editor_interface = get_editor_interface()
+	add_child(skeleton_operations)
+
+	batch_extras = BatchExtras.new()
+	batch_extras.name = "MCPBatchExtras"
+	batch_extras.editor_interface = get_editor_interface()
+	add_child(batch_extras)
+
+	project_utils = ProjectUtils.new()
+	project_utils.name = "MCPProjectUtils"
+	project_utils.editor_interface = get_editor_interface()
+	add_child(project_utils)
+
 	# Connect HTTP server to operation handlers
 	_setup_http_routes()
 	
@@ -187,7 +208,8 @@ func _exit_tree() -> void:
 				  physics_operations, particles_operations, shader_operations,
 				  audio_operations, testing_operations, editor_polish_operations,
 				  tilemap_operations, batch_operations, animation_extras,
-				  qa_validation_operations]:
+				  qa_validation_operations,
+				  skeleton_operations, batch_extras, project_utils]:
 		if child:
 			child.queue_free()
 	
@@ -421,6 +443,27 @@ func _setup_http_routes() -> void:
 	http_server.register_route("/api/animation/tree/connect_states", _handle_connect_states)
 	http_server.register_route("/api/animation/tree/set_blend",      _handle_set_blend_parameter)
 	http_server.register_route("/api/animation/tree/travel",         _handle_travel_to_state)
+
+	# Skeleton tools
+	http_server.register_route("/api/skeleton/get_bones",     _handle_get_skeleton_bones)
+	http_server.register_route("/api/skeleton/set_bone_pose", _handle_set_bone_pose)
+	http_server.register_route("/api/skeleton/reset_pose",    _handle_reset_skeleton_pose)
+
+	# Batch extras
+	http_server.register_route("/api/batch/attach_script",    _handle_batch_attach_script)
+	http_server.register_route("/api/batch/rename_nodes",     _handle_batch_rename_nodes)
+	http_server.register_route("/api/batch/move_file",        _handle_move_and_rename_file)
+	http_server.register_route("/api/batch/pack_scene",       _handle_pack_scene)
+	http_server.register_route("/api/batch/create_resource",  _handle_create_resource_file)
+
+	# Project utility tools
+	http_server.register_route("/api/project/assert_fps",        _handle_assert_fps_above)
+	http_server.register_route("/api/project/renderer_info",     _handle_get_renderer_info)
+	http_server.register_route("/api/project/assert_resource",   _handle_assert_resource_valid)
+	http_server.register_route("/api/project/node_global_xform", _handle_get_node_global_transform)
+	http_server.register_route("/api/project/set_global_xform",  _handle_set_node_global_transform)
+	http_server.register_route("/api/project/feature_tag",       _handle_toggle_feature_tag)
+	http_server.register_route("/api/project/node_metadata",     _handle_set_node_metadata)
 
 
 func _create_bottom_panel() -> void:
@@ -1154,3 +1197,57 @@ func _handle_reimport_all(params: Dictionary) -> Dictionary:
 
 func _handle_set_node_unique_name(params: Dictionary) -> Dictionary:
 	return qa_validation_operations.set_node_unique_name(params)
+
+
+# ── Skeleton handlers ─────────────────────────────────────────────────────────
+
+func _handle_get_skeleton_bones(params: Dictionary) -> Dictionary:
+	return skeleton_operations.get_skeleton_bones(params)
+
+func _handle_set_bone_pose(params: Dictionary) -> Dictionary:
+	return skeleton_operations.set_bone_pose(params)
+
+func _handle_reset_skeleton_pose(params: Dictionary) -> Dictionary:
+	return skeleton_operations.reset_skeleton_pose(params)
+
+
+# ── Batch extras handlers ─────────────────────────────────────────────────────
+
+func _handle_batch_attach_script(params: Dictionary) -> Dictionary:
+	return batch_extras.batch_attach_script(params)
+
+func _handle_batch_rename_nodes(params: Dictionary) -> Dictionary:
+	return batch_extras.batch_rename_nodes(params)
+
+func _handle_move_and_rename_file(params: Dictionary) -> Dictionary:
+	return batch_extras.move_and_rename_file(params)
+
+func _handle_pack_scene(params: Dictionary) -> Dictionary:
+	return batch_extras.pack_scene(params)
+
+func _handle_create_resource_file(params: Dictionary) -> Dictionary:
+	return batch_extras.create_resource_file(params)
+
+
+# ── Project utility handlers ──────────────────────────────────────────────────
+
+func _handle_assert_fps_above(params: Dictionary) -> Dictionary:
+	return await project_utils.assert_fps_above(params)
+
+func _handle_get_renderer_info(params: Dictionary) -> Dictionary:
+	return project_utils.get_renderer_info(params)
+
+func _handle_assert_resource_valid(params: Dictionary) -> Dictionary:
+	return project_utils.assert_resource_valid(params)
+
+func _handle_get_node_global_transform(params: Dictionary) -> Dictionary:
+	return project_utils.get_node_global_transform(params)
+
+func _handle_set_node_global_transform(params: Dictionary) -> Dictionary:
+	return project_utils.set_node_global_transform(params)
+
+func _handle_toggle_feature_tag(params: Dictionary) -> Dictionary:
+	return project_utils.toggle_feature_tag(params)
+
+func _handle_set_node_metadata(params: Dictionary) -> Dictionary:
+	return project_utils.set_node_metadata(params)

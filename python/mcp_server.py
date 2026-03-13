@@ -2426,6 +2426,198 @@ async def list_tools() -> list[Tool]:
                 "required": ["target_state"]
             }
         ),
+
+        # ── Skeleton tools ────────────────────────────────────────────────────
+        Tool(
+            name="get_skeleton_bones",
+            description="List all bones in a Skeleton3D with names, parent indices, rest transforms, current poses, and enabled state. Use to inspect character rigs.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the Skeleton3D node"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="set_bone_pose",
+            description="Set pose position, rotation, and/or scale on a Skeleton3D bone by name or index. Rotation accepts [x,y,z] Euler degrees or [x,y,z,w] quaternion.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":   {"type": "string",  "description": "Path to the Skeleton3D node"},
+                    "bone_name":   {"type": "string",  "description": "Bone name (use instead of bone_index)"},
+                    "bone_index":  {"type": "integer", "description": "Bone index (use instead of bone_name)"},
+                    "position":    {"type": "array",   "description": "[x, y, z] local pose position"},
+                    "rotation":    {"type": "array",   "description": "[x,y,z] Euler degrees or [x,y,z,w] quaternion"},
+                    "scale":       {"type": "array",   "description": "[x, y, z] pose scale"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="reset_skeleton_pose",
+            description="Reset all bone poses in a Skeleton3D to the rest pose, clearing any procedural or manual posing.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the Skeleton3D node"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+
+        # ── Batch extras ──────────────────────────────────────────────────────
+        Tool(
+            name="batch_attach_script",
+            description="Attach the same GDScript to every node matching a type and/or group filter. Use for giving a class script to all enemies, platforms, collectibles, etc.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "script_path":         {"type": "string",  "description": "res:// path to the .gd script to attach"},
+                    "node_type":           {"type": "string",  "description": "Only attach to nodes of this class (e.g. 'CharacterBody3D')"},
+                    "group_name":          {"type": "string",  "description": "Only attach to nodes in this group"},
+                    "overwrite_existing":  {"type": "boolean", "description": "Overwrite if node already has a script (default: false)"}
+                },
+                "required": ["script_path"]
+            }
+        ),
+        Tool(
+            name="batch_rename_nodes",
+            description="Find & replace in node names within a scene subtree. Supports regex. WARNING: may break NodePath references in scripts.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "search":       {"type": "string",  "description": "String or regex pattern to find in node names"},
+                    "replacement":  {"type": "string",  "description": "Replacement string"},
+                    "root_path":    {"type": "string",  "description": "Subtree root path (default: scene root)"},
+                    "node_type":    {"type": "string",  "description": "Only rename nodes of this class"},
+                    "use_regex":    {"type": "boolean", "description": "Treat search as regex (default: false)"}
+                },
+                "required": ["search", "replacement"]
+            }
+        ),
+        Tool(
+            name="move_and_rename_file",
+            description="Move and/or rename a file within the project. Both paths must be res:// paths. Triggers filesystem scan so references update.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "source_path": {"type": "string", "description": "Current res:// path of the file"},
+                    "dest_path":   {"type": "string", "description": "New res:// path (can be a different directory and/or name)"}
+                },
+                "required": ["source_path", "dest_path"]
+            }
+        ),
+        Tool(
+            name="pack_scene",
+            description="Save a node (and its children) as a new .tscn PackedScene file. The node stays in the original scene — this creates an independent copy.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":    {"type": "string", "description": "Path to the node to pack"},
+                    "output_path":  {"type": "string", "description": "res:// path for the output .tscn file"}
+                },
+                "required": ["node_path", "output_path"]
+            }
+        ),
+        Tool(
+            name="create_resource_file",
+            description="Create a .tres resource file of any Godot class (PhysicsMaterial, Environment, Sky, StandardMaterial3D, etc.) and optionally set initial properties.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "resource_type": {"type": "string", "description": "Godot class name, e.g. PhysicsMaterial, Environment, StandardMaterial3D"},
+                    "output_path":   {"type": "string", "description": "res:// path ending in .tres or .res"},
+                    "properties":    {"type": "object", "description": "Initial property values to set on the resource"}
+                },
+                "required": ["output_path"]
+            }
+        ),
+
+        # ── Project utilities ─────────────────────────────────────────────────
+        Tool(
+            name="assert_fps_above",
+            description="Sample FPS over N frames and assert the average meets a minimum threshold. Requires a scene to be playing for meaningful game FPS measurement.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "threshold":    {"type": "number",  "description": "Minimum acceptable average FPS (default: 30.0)"},
+                    "frame_count":  {"type": "integer", "description": "Number of frames to sample, 1–300 (default: 60)"}
+                }
+            }
+        ),
+        Tool(
+            name="get_renderer_info",
+            description="Get rendering backend, GPU adapter name/vendor, API version, VRAM usage, viewport size, and Godot version.",
+            inputSchema={
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        ),
+        Tool(
+            name="assert_resource_valid",
+            description="Verify that a res:// resource exists and loads without errors. Returns {passed, resource_type}.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "resource_path": {"type": "string", "description": "res:// path to the resource to verify"}
+                },
+                "required": ["resource_path"]
+            }
+        ),
+        Tool(
+            name="get_node_global_transform",
+            description="Get the world-space position, rotation (degrees), and scale of a Node3D or Node2D.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the Node3D or Node2D"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="set_node_global_transform",
+            description="Set the world-space position, rotation (degrees), and/or scale of a Node3D or Node2D.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":               {"type": "string", "description": "Path to the Node3D or Node2D"},
+                    "global_position":         {"type": "array",  "description": "[x,y,z] for Node3D or [x,y] for Node2D"},
+                    "global_rotation_degrees": {"type": "array",  "description": "[x,y,z] Euler degrees for Node3D or single float for Node2D"},
+                    "global_scale":            {"type": "array",  "description": "[x,y,z] for Node3D or [x,y] for Node2D"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="toggle_feature_tag",
+            description="Add or remove a custom feature tag in Project Settings (application/config/features). Tags can be queried at runtime with OS.has_feature('tag_name').",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tag":     {"type": "string",  "description": "Feature tag name to add or remove"},
+                    "enabled": {"type": "boolean", "description": "True to add the tag, false to remove it (default: true)"}
+                },
+                "required": ["tag"]
+            }
+        ),
+        Tool(
+            name="set_node_metadata",
+            description="Set or remove metadata on a node via node.set_meta() / node.remove_meta(). Metadata persists in .tscn files and is accessible at runtime via node.get_meta('key').",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string",  "description": "Path to the target node"},
+                    "key":       {"type": "string",  "description": "Metadata key name"},
+                    "value":     {"description": "Value to set (any type). Ignored if remove=true."},
+                    "remove":    {"type": "boolean", "description": "If true, remove the metadata key instead of setting it (default: false)"}
+                },
+                "required": ["node_path", "key"]
+            }
+        ),
     ]
 
 
@@ -2629,6 +2821,27 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
         "connect_states":             "/api/animation/tree/connect_states",
         "set_blend_parameter":        "/api/animation/tree/set_blend",
         "travel_to_state":            "/api/animation/tree/travel",
+
+        # Skeleton tools
+        "get_skeleton_bones":          "/api/skeleton/get_bones",
+        "set_bone_pose":               "/api/skeleton/set_bone_pose",
+        "reset_skeleton_pose":         "/api/skeleton/reset_pose",
+
+        # Batch extras
+        "batch_attach_script":         "/api/batch/attach_script",
+        "batch_rename_nodes":          "/api/batch/rename_nodes",
+        "move_and_rename_file":        "/api/batch/move_file",
+        "pack_scene":                  "/api/batch/pack_scene",
+        "create_resource_file":        "/api/batch/create_resource",
+
+        # Project utility tools
+        "assert_fps_above":            "/api/project/assert_fps",
+        "get_renderer_info":           "/api/project/renderer_info",
+        "assert_resource_valid":       "/api/project/assert_resource",
+        "get_node_global_transform":   "/api/project/node_global_xform",
+        "set_node_global_transform":   "/api/project/set_global_xform",
+        "toggle_feature_tag":          "/api/project/feature_tag",
+        "set_node_metadata":           "/api/project/node_metadata",
     }
     
     # ── Export tools (Python subprocess, no Godot HTTP needed) ───────────────
