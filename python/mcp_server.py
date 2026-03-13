@@ -1349,6 +1349,322 @@ async def list_tools() -> list[Tool]:
             inputSchema={"type": "object", "properties": {}, "required": []}
         ),
 
+        # ── TileMap Tools ─────────────────────────────────────────────────────
+        Tool(
+            name="paint_tiles",
+            description=(
+                "Paint multiple cells on a TileMap layer in one call. "
+                "Each cell: {x, y, source_id, atlas_x, atlas_y, alternative_tile}. "
+                "You can set default source_id/atlas_x/atlas_y at the top level for uniform tiles. "
+                "Adds layers automatically if needed. Use for placing floors, walls, decorations."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":         {"type": "string",  "description": "Path to the TileMap node"},
+                    "layer":             {"type": "integer", "description": "Layer index (default: 0)"},
+                    "cells":             {"type": "array",   "description": "Array of cell objects: [{x, y, source_id?, atlas_x?, atlas_y?, alternative_tile?}]"},
+                    "source_id":         {"type": "integer", "description": "Default TileSet source ID for all cells (default: 0)"},
+                    "atlas_x":           {"type": "integer", "description": "Default atlas X coordinate"},
+                    "atlas_y":           {"type": "integer", "description": "Default atlas Y coordinate"},
+                    "alternative_tile":  {"type": "integer", "description": "Default alternative tile index"}
+                },
+                "required": ["node_path", "cells"]
+            }
+        ),
+        Tool(
+            name="fill_tiles_rect",
+            description="Fill a rectangular region of a TileMap layer with a single tile. Specify top-left corner (x,y), width, height, and the tile (source_id, atlas_x, atlas_y).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":        {"type": "string",  "description": "Path to the TileMap node"},
+                    "layer":            {"type": "integer", "description": "Layer index (default: 0)"},
+                    "x":                {"type": "integer", "description": "Left edge cell X"},
+                    "y":                {"type": "integer", "description": "Top edge cell Y"},
+                    "width":            {"type": "integer", "description": "Width in cells"},
+                    "height":           {"type": "integer", "description": "Height in cells"},
+                    "source_id":        {"type": "integer", "description": "TileSet source ID"},
+                    "atlas_x":          {"type": "integer", "description": "Atlas X coordinate"},
+                    "atlas_y":          {"type": "integer", "description": "Atlas Y coordinate"},
+                    "alternative_tile": {"type": "integer", "description": "Alternative tile index (default: 0)"}
+                },
+                "required": ["node_path", "width", "height"]
+            }
+        ),
+        Tool(
+            name="clear_tiles",
+            description="Erase specific cells from a TileMap layer, or clear an entire layer if no cells are specified.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string",  "description": "Path to the TileMap node"},
+                    "layer":     {"type": "integer", "description": "Layer index (default: 0)"},
+                    "cells":     {"type": "array",   "description": "Cells to erase [{x, y}]. Omit to clear entire layer."}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="get_cell_tile",
+            description="Get the tile data (source_id, atlas coords, alternative_tile) at a specific TileMap cell position.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string",  "description": "Path to the TileMap node"},
+                    "layer":     {"type": "integer", "description": "Layer index (default: 0)"},
+                    "x":         {"type": "integer", "description": "Cell X coordinate"},
+                    "y":         {"type": "integer", "description": "Cell Y coordinate"}
+                },
+                "required": ["node_path", "x", "y"]
+            }
+        ),
+
+        # ── GridMap Tools ──────────────────────────────────────────────────────
+        Tool(
+            name="set_grid_cell",
+            description="Set a single GridMap cell to an item from the MeshLibrary. Use item_id=-1 to erase. Orientation 0–23 controls the 24 possible rotations.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":   {"type": "string",  "description": "Path to the GridMap node"},
+                    "x":           {"type": "integer", "description": "Cell X coordinate"},
+                    "y":           {"type": "integer", "description": "Cell Y (vertical)"},
+                    "z":           {"type": "integer", "description": "Cell Z coordinate"},
+                    "item_id":     {"type": "integer", "description": "MeshLibrary item ID (-1 to erase)"},
+                    "orientation": {"type": "integer", "description": "Rotation index 0–23 (default: 0)"}
+                },
+                "required": ["node_path", "x", "y", "z", "item_id"]
+            }
+        ),
+        Tool(
+            name="fill_grid_box",
+            description="Fill a 3D box region of a GridMap with a single mesh item. Use for building floors (y=0, height=1), walls, platforms, or entire rooms.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":   {"type": "string",  "description": "Path to the GridMap node"},
+                    "x":           {"type": "integer", "description": "Start X"},
+                    "y":           {"type": "integer", "description": "Start Y"},
+                    "z":           {"type": "integer", "description": "Start Z"},
+                    "width":       {"type": "integer", "description": "X extent (cells)"},
+                    "height":      {"type": "integer", "description": "Y extent (cells)"},
+                    "depth":       {"type": "integer", "description": "Z extent (cells)"},
+                    "item_id":     {"type": "integer", "description": "MeshLibrary item ID"},
+                    "orientation": {"type": "integer", "description": "Rotation index 0–23 (default: 0)"}
+                },
+                "required": ["node_path", "width", "height", "depth", "item_id"]
+            }
+        ),
+        Tool(
+            name="get_grid_used_cells",
+            description="List all occupied cells in a GridMap with their item IDs, orientations, and MeshLibrary item names (if available).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the GridMap node"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+
+        # ── Batch Operation Tools ──────────────────────────────────────────────
+        Tool(
+            name="batch_set_property_on_type",
+            description="Set a property on every node of a given Godot class in the current scene. Use for: set all Light3D energy to 1.5, enable all CollisionShape3D, configure all AudioStreamPlayer3D buses.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_type": {"type": "string", "description": "Godot class name (e.g. 'Light3D', 'CollisionShape3D', 'MeshInstance3D')"},
+                    "property":  {"type": "string", "description": "Property name to set"},
+                    "value":     {"description": "New value (arrays are coerced to Vector2/3/Color)"}
+                },
+                "required": ["node_type", "property", "value"]
+            }
+        ),
+        Tool(
+            name="batch_set_property_on_group",
+            description="Set a property on every node belonging to a named group in the current scene. Use for groups like 'enemies', 'collectibles', 'platforms'.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "group_name": {"type": "string", "description": "Group name to target"},
+                    "property":   {"type": "string", "description": "Property name to set"},
+                    "value":      {"description": "New value"}
+                },
+                "required": ["group_name", "property", "value"]
+            }
+        ),
+        Tool(
+            name="replace_in_all_scripts",
+            description=(
+                "Find & replace text or regex across all .gd script files in the project. "
+                "Supports dry_run mode to preview changes. Set include_addons=true to also scan addons/. "
+                "Use for: rename a function everywhere, update a deprecated API call, fix a typo across all scripts."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "search":          {"type": "string",  "description": "Text or regex pattern to search for"},
+                    "replacement":     {"type": "string",  "description": "Replacement text (use $1/$2 for regex groups)"},
+                    "use_regex":       {"type": "boolean", "description": "Treat search as a regex pattern (default: false)"},
+                    "dry_run":         {"type": "boolean", "description": "Preview changes without writing files (default: false)"},
+                    "include_addons":  {"type": "boolean", "description": "Also scan addons/ directory (default: false)"}
+                },
+                "required": ["search", "replacement"]
+            }
+        ),
+        Tool(
+            name="batch_create_nodes",
+            description=(
+                "Create multiple nodes in one call. Ideal for scaffolding entire systems in a single request. "
+                "Each entry: {type, name, parent_path, properties: {key: value}, script: 'res://...'}. "
+                "Array property values are coerced to Vector2/Vector3/Color automatically."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "nodes": {
+                        "type": "array",
+                        "description": "Array of node specs",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "type":        {"type": "string", "description": "Godot class name"},
+                                "name":        {"type": "string", "description": "Node name"},
+                                "parent_path": {"type": "string", "description": "Parent path (default: scene root)"},
+                                "properties":  {"type": "object", "description": "Property key→value pairs"},
+                                "script":      {"type": "string", "description": "res:// path to attach script"}
+                            }
+                        }
+                    }
+                },
+                "required": ["nodes"]
+            }
+        ),
+
+        # ── Animation Extra Tools ──────────────────────────────────────────────
+        Tool(
+            name="add_blend_space_point",
+            description=(
+                "Add an animation blend point to an AnimationNodeBlendSpace1D or BlendSpace2D "
+                "that is a state inside an AnimationNodeStateMachine. "
+                "For 1D: blend_position is a float. For 2D: blend_position is [x, y]. "
+                "Use to build locomotion blending (idle/walk/run/sprint at different speeds)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tree_path":       {"type": "string", "description": "Path to the AnimationTree node"},
+                    "state_name":      {"type": "string", "description": "Name of the BlendSpace state in the StateMachine"},
+                    "animation_name":  {"type": "string", "description": "Animation to play at this blend point"},
+                    "blend_position":  {"description": "Float for 1D, [x, y] array for 2D blend space"}
+                },
+                "required": ["state_name", "animation_name", "blend_position"]
+            }
+        ),
+        Tool(
+            name="get_blend_space_info",
+            description="Get all blend points, positions, limits, and snap settings from an AnimationNodeBlendSpace1D or BlendSpace2D state.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tree_path":  {"type": "string", "description": "Path to the AnimationTree node"},
+                    "state_name": {"type": "string", "description": "Name of the blend space state"}
+                },
+                "required": ["state_name"]
+            }
+        ),
+        Tool(
+            name="copy_animation",
+            description=(
+                "Copy animations from one AnimationPlayer to another (deep-copy — players are independent after). "
+                "Specify animation_names to copy specific ones, or omit to copy all. "
+                "Use dest_library_name to organize copied animations into a named library."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "source_player_path": {"type": "string", "description": "Path to source AnimationPlayer"},
+                    "dest_player_path":   {"type": "string", "description": "Path to destination AnimationPlayer"},
+                    "animation_names":    {"type": "array",  "items": {"type": "string"}, "description": "Specific animation names to copy (omit to copy all)"},
+                    "dest_library_name":  {"type": "string", "description": "Destination library name (default: '' = default library)"}
+                },
+                "required": ["source_player_path", "dest_player_path"]
+            }
+        ),
+        Tool(
+            name="set_animation_speed_scale",
+            description="Set the playback speed_scale on an AnimationPlayer. 1.0=normal, 2.0=double speed, 0.5=slow motion, 0=freeze.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":  {"type": "string", "description": "Path to the AnimationPlayer node"},
+                    "speed_scale":  {"type": "number", "description": "Playback speed multiplier (default: 1.0)"}
+                },
+                "required": ["speed_scale"]
+            }
+        ),
+
+        # ── QA / Validation Tools ──────────────────────────────────────────────
+        Tool(
+            name="assert_no_errors",
+            description="Assert that the Godot error log contains no errors. Returns {passed, error_count, errors}. Use in automated test chains after scene setup or gameplay simulation.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "include_warnings": {"type": "boolean", "description": "Also fail if warnings exist (default: false)"}
+                }
+            }
+        ),
+        Tool(
+            name="validate_scene",
+            description=(
+                "Validate the current scene for common issues. Checks: "
+                "CollisionShape nodes missing shape resources, physics bodies without collision, "
+                "MeshInstance3D without mesh, AnimationTree pointing to invalid player, "
+                "Area nodes without collision shapes, lights with unusually high energy. "
+                "Returns {passed, error_count, warning_count, findings}."
+            ),
+            inputSchema={"type": "object", "properties": {}, "required": []}
+        ),
+        Tool(
+            name="simulate_mouse_path",
+            description="Simulate mouse movement along an array of screen positions with configurable interval. Optionally click at the final position. Use for testing UI drag operations, drawing tools, or camera controls.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "points":       {"type": "array",   "description": "Array of {x, y} positions to move through"},
+                    "interval_ms":  {"type": "integer", "description": "Milliseconds between each move step (default: 50)"},
+                    "click_at_end": {"type": "boolean", "description": "Click at the final position (default: false)"},
+                    "button_index": {"type": "integer", "description": "Mouse button for click (1=left, 2=right, default: 1)"}
+                },
+                "required": ["points"]
+            }
+        ),
+        Tool(
+            name="reimport_all",
+            description="Trigger a full filesystem scan so Godot detects and reimports changed assets. Set force_reimport=true to force reimport of all known assets (slower but thorough).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "force_reimport": {"type": "boolean", "description": "Force reimport all assets, not just changed ones (default: false)"}
+                }
+            }
+        ),
+        Tool(
+            name="set_node_unique_name",
+            description="Set or clear the unique_name_in_owner flag on a node, enabling %NodeName shorthand access from scripts (node.get_node('%MyNode')). Use after creating important singleton-like nodes.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string",  "description": "Path to the node"},
+                    "unique":    {"type": "boolean", "description": "True to enable unique name, false to disable (default: true)"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+
         # ── Audio Tools ───────────────────────────────────────────────────────
         Tool(
             name="create_audio_player_3d",
@@ -2219,6 +2535,36 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
 
         # Profiler snapshot
         "get_profiler_snapshot": "/api/runtime/profiler_snapshot",
+
+        # TileMap tools
+        "paint_tiles":             "/api/tilemap/paint",
+        "fill_tiles_rect":         "/api/tilemap/fill_rect",
+        "clear_tiles":             "/api/tilemap/clear",
+        "get_cell_tile":           "/api/tilemap/get_cell",
+
+        # GridMap tools
+        "set_grid_cell":           "/api/gridmap/set_cell",
+        "fill_grid_box":           "/api/gridmap/fill_box",
+        "get_grid_used_cells":     "/api/gridmap/used_cells",
+
+        # Batch operation tools
+        "batch_set_property_on_type":  "/api/batch/set_property_on_type",
+        "batch_set_property_on_group": "/api/batch/set_property_on_group",
+        "replace_in_all_scripts":      "/api/batch/replace_in_scripts",
+        "batch_create_nodes":          "/api/batch/create_nodes",
+
+        # Animation extras
+        "add_blend_space_point":       "/api/animation/blend_space/add_point",
+        "get_blend_space_info":        "/api/animation/blend_space/info",
+        "copy_animation":              "/api/animation/copy",
+        "set_animation_speed_scale":   "/api/animation/set_speed_scale",
+
+        # QA / Validation tools
+        "assert_no_errors":        "/api/qa/assert_no_errors",
+        "validate_scene":          "/api/qa/validate_scene",
+        "simulate_mouse_path":     "/api/qa/simulate_mouse_path",
+        "reimport_all":            "/api/qa/reimport_all",
+        "set_node_unique_name":    "/api/qa/set_node_unique_name",
 
         # Audio tools
         "create_audio_player_3d":  "/api/audio/create_3d",

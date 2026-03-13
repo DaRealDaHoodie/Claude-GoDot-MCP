@@ -10,7 +10,7 @@ Tell Claude "build a full 2D platformer with double-jump, 3 enemy types, coins, 
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude direct, real-time control over the Godot editor:
 
-- **135 tools** covering every aspect of Godot development
+- **155 tools** covering every aspect of Godot development
 - **Scene & node operations** — create, edit, save, delete, reorder, rename, bake navigation
 - **Script operations** — create, edit, attach GDScript files
 - **Signal wiring** — connect/disconnect signals between nodes programmatically
@@ -136,7 +136,7 @@ Create an NPC interaction system:
 
 ---
 
-## Tool Reference (135 tools)
+## Tool Reference (155 tools)
 
 ### Scene Operations
 | Tool | Description |
@@ -274,6 +274,46 @@ Create an NPC interaction system:
 | Tool | Description |
 |------|-------------|
 | `scan_broken_resources` | Walk all .tscn/.tres files, find every `res://` reference that no longer exists on disk |
+
+### TileMap
+| Tool | Description |
+|------|-------------|
+| `paint_tiles` | Paint multiple TileMap cells in one call with source_id, atlas coords, alternative_tile |
+| `fill_tiles_rect` | Fill a rectangular region with a single tile |
+| `clear_tiles` | Erase specific cells or clear an entire TileMap layer |
+| `get_cell_tile` | Get tile data at a specific cell position |
+
+### GridMap
+| Tool | Description |
+|------|-------------|
+| `set_grid_cell` | Set a single GridMap cell (item_id, orientation 0–23) |
+| `fill_grid_box` | Fill a 3D box region with one MeshLibrary item |
+| `get_grid_used_cells` | List all occupied cells with item IDs and orientations |
+
+### Batch Operations
+| Tool | Description |
+|------|-------------|
+| `batch_set_property_on_type` | Set a property on every node of a given class in the scene |
+| `batch_set_property_on_group` | Set a property on every node in a named group |
+| `replace_in_all_scripts` | Find & replace text/regex across all .gd files (supports dry_run) |
+| `batch_create_nodes` | Create multiple nodes with properties + scripts in one call |
+
+### Animation (Extended)
+| Tool | Description |
+|------|-------------|
+| `add_blend_space_point` | Add a blend point to AnimationNodeBlendSpace1D or BlendSpace2D |
+| `get_blend_space_info` | Get all blend points, limits, and snap settings from a blend space |
+| `copy_animation` | Copy animations between AnimationPlayers (deep copy, independent) |
+| `set_animation_speed_scale` | Set AnimationPlayer speed_scale (0.5=slow-mo, 2.0=fast) |
+
+### QA / Validation
+| Tool | Description |
+|------|-------------|
+| `assert_no_errors` | Assert Godot error log is clean — returns {passed, error_count, errors} |
+| `validate_scene` | Check scene for missing shapes, meshes, broken AnimationTree links, etc. |
+| `simulate_mouse_path` | Move mouse along an array of screen points with interval + optional click |
+| `reimport_all` | Trigger full filesystem scan / reimport of all changed assets |
+| `set_node_unique_name` | Set unique_name_in_owner on a node (enables %NodeName shorthand) |
 
 ### Audio
 | Tool | Description |

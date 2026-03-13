@@ -15,6 +15,10 @@ const ShaderOperations = preload("res://addons/godot_mcp_enhanced/shader_operati
 const AudioOperations = preload("res://addons/godot_mcp_enhanced/audio_operations.gd")
 const TestingOperations = preload("res://addons/godot_mcp_enhanced/testing_operations.gd")
 const EditorPolishOperations = preload("res://addons/godot_mcp_enhanced/editor_polish_operations.gd")
+const TilemapOperations = preload("res://addons/godot_mcp_enhanced/tilemap_operations.gd")
+const BatchOperations = preload("res://addons/godot_mcp_enhanced/batch_operations.gd")
+const AnimationExtras = preload("res://addons/godot_mcp_enhanced/animation_extras.gd")
+const QAValidationOperations = preload("res://addons/godot_mcp_enhanced/qa_validation_operations.gd")
 
 var http_server: Node
 var screenshot_manager: Node
@@ -30,6 +34,10 @@ var shader_operations: Node
 var audio_operations: Node
 var testing_operations: Node
 var editor_polish_operations: Node
+var tilemap_operations: Node
+var batch_operations: Node
+var animation_extras: Node
+var qa_validation_operations: Node
 
 var bottom_panel: Control
 var config: Dictionary = {}
@@ -111,6 +119,27 @@ func _enter_tree() -> void:
 	editor_polish_operations.editor_interface = get_editor_interface()
 	add_child(editor_polish_operations)
 
+	tilemap_operations = TilemapOperations.new()
+	tilemap_operations.name = "MCPTilemapOperations"
+	tilemap_operations.editor_interface = get_editor_interface()
+	add_child(tilemap_operations)
+
+	batch_operations = BatchOperations.new()
+	batch_operations.name = "MCPBatchOperations"
+	batch_operations.editor_interface = get_editor_interface()
+	add_child(batch_operations)
+
+	animation_extras = AnimationExtras.new()
+	animation_extras.name = "MCPAnimationExtras"
+	animation_extras.editor_interface = get_editor_interface()
+	add_child(animation_extras)
+
+	qa_validation_operations = QAValidationOperations.new()
+	qa_validation_operations.name = "MCPQAValidationOperations"
+	qa_validation_operations.editor_interface = get_editor_interface()
+	qa_validation_operations.debugger_ref = debugger_integration  # pass error log reference
+	add_child(qa_validation_operations)
+
 	# Connect HTTP server to operation handlers
 	_setup_http_routes()
 	
@@ -156,7 +185,9 @@ func _exit_tree() -> void:
 				  script_operations, debugger_integration, file_operations,
 				  runtime_operations, animation_operations,
 				  physics_operations, particles_operations, shader_operations,
-				  audio_operations, testing_operations, editor_polish_operations]:
+				  audio_operations, testing_operations, editor_polish_operations,
+				  tilemap_operations, batch_operations, animation_extras,
+				  qa_validation_operations]:
 		if child:
 			child.queue_free()
 	
@@ -296,6 +327,36 @@ func _setup_http_routes() -> void:
 
 	# Profiler snapshot
 	http_server.register_route("/api/runtime/profiler_snapshot", _handle_get_profiler_snapshot)
+
+	# TileMap tools
+	http_server.register_route("/api/tilemap/paint",       _handle_paint_tiles)
+	http_server.register_route("/api/tilemap/fill_rect",   _handle_fill_tiles_rect)
+	http_server.register_route("/api/tilemap/clear",       _handle_clear_tiles)
+	http_server.register_route("/api/tilemap/get_cell",    _handle_get_cell_tile)
+
+	# GridMap tools
+	http_server.register_route("/api/gridmap/set_cell",    _handle_set_grid_cell)
+	http_server.register_route("/api/gridmap/fill_box",    _handle_fill_grid_box)
+	http_server.register_route("/api/gridmap/used_cells",  _handle_get_grid_used_cells)
+
+	# Batch operation tools
+	http_server.register_route("/api/batch/set_property_on_type",  _handle_batch_set_property_on_type)
+	http_server.register_route("/api/batch/set_property_on_group", _handle_batch_set_property_on_group)
+	http_server.register_route("/api/batch/replace_in_scripts",    _handle_replace_in_all_scripts)
+	http_server.register_route("/api/batch/create_nodes",          _handle_batch_create_nodes)
+
+	# Animation extras
+	http_server.register_route("/api/animation/blend_space/add_point", _handle_add_blend_space_point)
+	http_server.register_route("/api/animation/blend_space/info",      _handle_get_blend_space_info)
+	http_server.register_route("/api/animation/copy",                  _handle_copy_animation)
+	http_server.register_route("/api/animation/set_speed_scale",       _handle_set_animation_speed_scale)
+
+	# QA / Validation tools
+	http_server.register_route("/api/qa/assert_no_errors",    _handle_assert_no_errors)
+	http_server.register_route("/api/qa/validate_scene",      _handle_validate_scene)
+	http_server.register_route("/api/qa/simulate_mouse_path", _handle_simulate_mouse_path)
+	http_server.register_route("/api/qa/reimport_all",        _handle_reimport_all)
+	http_server.register_route("/api/qa/set_node_unique_name",_handle_set_node_unique_name)
 
 	# Audio tools
 	http_server.register_route("/api/audio/create_3d",           _handle_create_audio_player_3d)
@@ -1018,3 +1079,78 @@ func _handle_batch_duplicate_with_offset(params: Dictionary) -> Dictionary:
 
 func _handle_find_scripts_with_pattern(params: Dictionary) -> Dictionary:
 	return editor_polish_operations.find_scripts_with_pattern(params)
+
+
+# ── TileMap handlers ──────────────────────────────────────────────────────────
+
+func _handle_paint_tiles(params: Dictionary) -> Dictionary:
+	return tilemap_operations.paint_tiles(params)
+
+func _handle_fill_tiles_rect(params: Dictionary) -> Dictionary:
+	return tilemap_operations.fill_tiles_rect(params)
+
+func _handle_clear_tiles(params: Dictionary) -> Dictionary:
+	return tilemap_operations.clear_tiles(params)
+
+func _handle_get_cell_tile(params: Dictionary) -> Dictionary:
+	return tilemap_operations.get_cell_tile(params)
+
+
+# ── GridMap handlers ──────────────────────────────────────────────────────────
+
+func _handle_set_grid_cell(params: Dictionary) -> Dictionary:
+	return tilemap_operations.set_grid_cell(params)
+
+func _handle_fill_grid_box(params: Dictionary) -> Dictionary:
+	return tilemap_operations.fill_grid_box(params)
+
+func _handle_get_grid_used_cells(params: Dictionary) -> Dictionary:
+	return tilemap_operations.get_grid_used_cells(params)
+
+
+# ── Batch operation handlers ──────────────────────────────────────────────────
+
+func _handle_batch_set_property_on_type(params: Dictionary) -> Dictionary:
+	return batch_operations.batch_set_property_on_type(params)
+
+func _handle_batch_set_property_on_group(params: Dictionary) -> Dictionary:
+	return batch_operations.batch_set_property_on_group(params)
+
+func _handle_replace_in_all_scripts(params: Dictionary) -> Dictionary:
+	return batch_operations.replace_in_all_scripts(params)
+
+func _handle_batch_create_nodes(params: Dictionary) -> Dictionary:
+	return batch_operations.batch_create_nodes(params)
+
+
+# ── Animation extras handlers ─────────────────────────────────────────────────
+
+func _handle_add_blend_space_point(params: Dictionary) -> Dictionary:
+	return animation_extras.add_blend_space_point(params)
+
+func _handle_get_blend_space_info(params: Dictionary) -> Dictionary:
+	return animation_extras.get_blend_space_info(params)
+
+func _handle_copy_animation(params: Dictionary) -> Dictionary:
+	return animation_extras.copy_animation(params)
+
+func _handle_set_animation_speed_scale(params: Dictionary) -> Dictionary:
+	return animation_extras.set_animation_speed_scale(params)
+
+
+# ── QA / Validation handlers ──────────────────────────────────────────────────
+
+func _handle_assert_no_errors(params: Dictionary) -> Dictionary:
+	return qa_validation_operations.assert_no_errors(params)
+
+func _handle_validate_scene(params: Dictionary) -> Dictionary:
+	return qa_validation_operations.validate_scene(params)
+
+func _handle_simulate_mouse_path(params: Dictionary) -> Dictionary:
+	return await qa_validation_operations.simulate_mouse_path(params)
+
+func _handle_reimport_all(params: Dictionary) -> Dictionary:
+	return qa_validation_operations.reimport_all(params)
+
+func _handle_set_node_unique_name(params: Dictionary) -> Dictionary:
+	return qa_validation_operations.set_node_unique_name(params)
