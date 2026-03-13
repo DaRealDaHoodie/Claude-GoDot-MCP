@@ -293,18 +293,19 @@ func _parse_http_request(request: String) -> Dictionary:
 func _send_response(client: StreamPeerTCP, status_code: int, data: Variant) -> void:
 	var status_text = _get_status_text(status_code)
 	var json_data = JSON.stringify(data)
-	
+	var body_bytes = json_data.to_utf8_buffer()
+
 	var response = "HTTP/1.1 %d %s\r\n" % [status_code, status_text]
 	response += "Content-Type: application/json\r\n"
-	response += "Content-Length: %d\r\n" % json_data.length()
+	response += "Content-Length: %d\r\n" % body_bytes.size()
 	response += "Access-Control-Allow-Origin: *\r\n"
 	response += "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
 	response += "Access-Control-Allow-Headers: Content-Type\r\n"
 	response += "Connection: close\r\n"
 	response += "\r\n"
-	response += json_data
-	
+
 	client.put_data(response.to_utf8_buffer())
+	client.put_data(body_bytes)
 	# Disconnect after a short delay to ensure data is sent
 	get_tree().create_timer(0.1).timeout.connect(func(): client.disconnect_from_host())
 

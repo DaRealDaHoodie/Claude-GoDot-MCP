@@ -219,13 +219,8 @@ func execute_editor_script(code: String) -> Dictionary:
 	
 	# Create a temporary script
 	var script = GDScript.new()
-	script.source_code = """
-extends Node
-
-func execute():
-	""" + code.indent("\t") + """
-	return {"success": true, "message": "Code executed"}
-"""
+	# Build source so user code indents exactly one level (no double-tab bug)
+	script.source_code = "@tool\nextends Node\n\nfunc execute():\n" + code.indent("\t") + "\n\treturn {\"success\": true, \"message\": \"Code executed\"}\n"
 	
 	var error = script.reload()
 	if error != OK:

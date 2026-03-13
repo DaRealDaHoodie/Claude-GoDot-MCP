@@ -3,6 +3,23 @@ extends Node
 
 var editor_interface: EditorInterface
 
+const TYPE_NAMES := {
+	0: "nil", 1: "bool", 2: "int", 3: "float", 4: "String",
+	5: "Vector2", 6: "Vector2i", 7: "Rect2", 8: "Rect2i",
+	9: "Vector3", 10: "Vector3i", 11: "Transform2D", 12: "Vector4",
+	13: "Vector4i", 14: "Plane", 15: "Quaternion", 16: "AABB",
+	17: "Basis", 18: "Transform3D", 19: "Projection", 20: "Color",
+	21: "StringName", 22: "NodePath", 23: "RID", 24: "Object",
+	25: "Callable", 26: "Signal", 27: "Dictionary", 28: "Array",
+	29: "PackedByteArray", 30: "PackedInt32Array", 31: "PackedInt64Array",
+	32: "PackedFloat32Array", 33: "PackedFloat64Array", 34: "PackedStringArray",
+	35: "PackedVector2Array", 36: "PackedVector3Array", 37: "PackedColorArray",
+	38: "PackedVector4Array"
+}
+
+func type_string(type_id: int) -> String:
+	return TYPE_NAMES.get(type_id, "unknown(%d)" % type_id)
+
 
 # ===== INPUT SIMULATION =====
 
@@ -145,11 +162,12 @@ func get_node_methods(node_path: String) -> Dictionary:
 	var script = node.get_script()
 	
 	if script:
-		for method in node.get_script_method_list():
+		for method in script.get_script_method_list():
+			var ret_info = method.get("return", {})
 			methods.append({
 				"name": method.name,
-				"return_type": type_string(method.return.type),
-				"args": method.args
+				"return_type": type_string(ret_info.get("type", 0)),
+				"args": method.get("args", [])
 			})
 	
 	return {

@@ -27,6 +27,26 @@ GODOT_BASE_URL = f"http://{GODOT_HOST}:{GODOT_PORT}"
 # Initialize MCP server
 app = Server("godot-mcp-enhanced")
 
+# Cache for the Godot project path (fetched once from running Godot)
+_godot_project_path: Optional[str] = None
+
+
+async def resolve_res_path(res_path: str) -> str:
+    """Convert a res:// path to an absolute filesystem path using Godot's project_path."""
+    global _godot_project_path
+    if not res_path.startswith("res://"):
+        return res_path
+    if _godot_project_path is None:
+        try:
+            result = await call_godot_api("/project_info")
+            _godot_project_path = result.get("data", {}).get("project_path", "")
+        except Exception:
+            _godot_project_path = ""
+    if _godot_project_path:
+        return os.path.join(_godot_project_path, res_path[len("res://"):])
+    # Fallback: strip res:// and use CWD
+    return res_path.replace("res://", "./")
+
 
 async def call_godot_api(endpoint: str, params: dict = None) -> dict:
     """
@@ -3137,9 +3157,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
                 "read_project_settings", "update_project_settings", "create_directory", "list_directory"]:
         
         if name == "read_scene_file":
-            scene_path = arguments.get("scene_path", "")
-            if scene_path.startswith("res://"):
-                scene_path = scene_path.replace("res://", "./")
+            scene_path = await resolve_res_path(arguments.get("scene_path", ""))
             
             try:
                 with open(scene_path, 'r', encoding='utf-8') as f:
@@ -3162,11 +3180,8 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
                 )]
         
         elif name == "write_scene_file":
-            scene_path = arguments.get("scene_path", "")
+            scene_path = await resolve_res_path(arguments.get("scene_path", ""))
             content = arguments.get("content", "")
-            
-            if scene_path.startswith("res://"):
-                scene_path = scene_path.replace("res://", "./")
             
             try:
                 os.makedirs(os.path.dirname(scene_path) if os.path.dirname(scene_path) else ".", exist_ok=True)
@@ -3190,9 +3205,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
                 )]
         
         elif name == "read_script_file":
-            script_path = arguments.get("script_path", "")
-            if script_path.startswith("res://"):
-                script_path = script_path.replace("res://", "./")
+            script_path = await resolve_res_path(arguments.get("script_path", ""))
             
             try:
                 with open(script_path, 'r', encoding='utf-8') as f:
@@ -3215,11 +3228,8 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
                 )]
         
         elif name == "write_script_file":
-            script_path = arguments.get("script_path", "")
+            script_path = await resolve_res_path(arguments.get("script_path", ""))
             content = arguments.get("content", "")
-            
-            if script_path.startswith("res://"):
-                script_path = script_path.replace("res://", "./")
             
             try:
                 os.makedirs(os.path.dirname(script_path) if os.path.dirname(script_path) else ".", exist_ok=True)

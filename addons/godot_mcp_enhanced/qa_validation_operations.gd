@@ -76,7 +76,7 @@ func validate_scene(params: Dictionary) -> Dictionary:
 
 
 func _validate_node_recursive(node: Node, root: Node, findings: Array) -> void:
-	var path = str(node.get_path_to(root)) if node != root else node.name
+	var path = str(root.get_path_to(node)) if node != root else node.name
 
 	# CollisionShape without shape resource
 	if (node is CollisionShape3D or node is CollisionShape2D) and not node.shape:
