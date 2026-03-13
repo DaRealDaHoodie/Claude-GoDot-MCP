@@ -1,0 +1,21 @@
+# Claude Code settings (per-project, not shared)
+.claude/
+
+# Working test project (local development only)
+working-test/
+
+# Python
+python/__pycache__/
+python/.venv/
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

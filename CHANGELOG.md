@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-03-13
+
+### 🐛 Bug Fixes — 10 Bugs Found & Fixed via Full 5-Phase Test Suite
+
+All bugs discovered during an exhaustive autonomous test run covering all 170 tools
+against a live Godot 4.6.1 project. Each fix is committed individually with context.
+
+#### GDScript / Plugin Fixes
+
+- **`get_node_methods`** — Three cascading crashes fixed in `runtime_operations.gd`:
+  1. `method.return.type` — `return` is a GDScript keyword; dot-access on a Dict key
+     named `return` silently crashes at runtime. Fixed: `.get("return", {}).get("type", 0)`
+  2. `type_string()` not available in Godot 4.x. Fixed: added `TYPE_NAMES` const dict
+     and local helper function.
+  3. `node.get_script_method_list()` does not exist on Node instances. Fixed: use
+     `script = node.get_script(); script.get_script_method_list()`
+
+- **`execute_editor_script`** — Double-indent template bug in `script_operations.gd`.
+  The `\t` prefix + `code.indent("\t")` produced double-indented user code, causing
+  every script to fail with "Parse error". Fixed: removed leading `\t` from template.
+
+- **`validate_scene`** — All `node_path` values returned `".."` in `qa_validation_operations.gd`.
+  `node.get_path_to(root)` walks child→parent (always `".."`). Fixed: `root.get_path_to(node)`.
+
+- **`http_server`** — Content-Length used `.length()` (Unicode char count) instead of
+  UTF-8 byte count. Responses containing `°`, `⋅`, `²` (physics hint strings) were
+  truncated mid-JSON, causing "Unterminated string" parse errors. Fixed: `body_bytes.size()`
+  and separate `client.put_data(body_bytes)` call.
+
+- **`setup_animation_tree`** — Always created a new `AnimationTree` node, accumulating
+  duplicates on each call. Fixed: check `parent.get_node_or_null(tree_name)` first.
+
+- **`add_state_to_machine`** — `tree.tree_root.get_class()` called on null `tree_root`
+  → silent GDScript crash returning `{}`. Fixed: null guard before `.get_class()`.
+
+- **`toggle_feature_tag`** — `ProjectSettings.set_setting()` does not reliably persist
+  `application/config/features` in Godot 4.x editor context. Fixed: read/write
+  `project.godot` directly via `FileAccess` + `RegEx` for reliable round-trip.
+
+#### Python MCP Server Fixes
+
+- **`read_script_file` / `read_scene_file` / `write_script_file` / `write_scene_file`** —
+  `res://` paths resolved to `./` (Python CWD = `python/` directory) instead of the
+  Godot project directory. Fixed: `resolve_res_path()` helper fetches the project path
+  from the live Godot instance via `/api/project/info` and caches it.
+
+- **`resolve_res_path`** — Called wrong endpoint `/project_info` (404) instead of
+  `/api/project/info`. Exception was silently caught, setting `_godot_project_path = ""`
+  and permanently falling back to `./`. Fixed: correct endpoint.
+
+- **`create_export_preset` / `get_export_presets`** — `project_path` defaulted to
+  `os.getcwd()` (`python/` dir), writing `export_presets.cfg` to the wrong location.
+  Fixed: use `_godot_project_path` cache with `os.getcwd()` as last-resort fallback.
+
+### Changed
+
+- Repository moved to `DaRealDaHoodie/Claude-GoDot-MCP`
+- All documentation URLs updated to reflect new repository location
+- Requires **Godot 4.6** (tested on 4.6.1-stable)
+
+---
+
 ## [1.0.0] - 2025-01-15
 
 ### 🎉 Major Release - Runtime Operations & Multi-CLI Support
@@ -194,14 +256,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute to this project.
 
 ## Links
 
-- **Repository**: https://github.com/Rufaty/godot-mcp-enhanced
-- **Issues**: https://github.com/Rufaty/godot-mcp-enhanced/issues
-- **Discussions**: https://github.com/Rufaty/godot-mcp-enhanced/discussions
+- **Repository**: https://github.com/DaRealDaHoodie/Claude-GoDot-MCP
+- **Issues**: https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/issues
+- **Discussions**: https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/discussions
 - **Documentation**: [docs/](docs/)
 
 ---
 
-[1.0.0]: https://github.com/Rufaty/godot-mcp-enhanced/releases/tag/v1.0.0
-[0.9.0]: https://github.com/Rufaty/godot-mcp-enhanced/releases/tag/v0.9.0
-[0.8.0]: https://github.com/Rufaty/godot-mcp-enhanced/releases/tag/v0.8.0
-[0.5.0]: https://github.com/Rufaty/godot-mcp-enhanced/releases/tag/v0.5.0
+[1.0.0]: https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/releases/tag/v1.0.0
+[0.9.0]: https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/releases/tag/v0.9.0
+[0.8.0]: https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/releases/tag/v0.8.0
+[0.5.0]: https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/releases/tag/v0.5.0
+
+[1.1.0]: https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/releases/tag/v1.1.0

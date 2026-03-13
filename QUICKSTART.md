@@ -25,12 +25,12 @@ Before starting, install:
 
 1. **Download** this repository or clone it:
    ```bash
-   git clone https://github.com/Rufaty/godot-mcp-enhanced.git
+   git clone https://github.com/DaRealDaHoodie/Claude-GoDot-MCP.git
    ```
 
 2. **Copy the plugin** to your Godot project:
    ```
-   Copy: godot-mcp-enhanced/addons/godot_mcp_enhanced/
+   Copy: Claude-GoDot-MCP/addons/godot_mcp_enhanced/
    To:   your-project/addons/godot_mcp_enhanced/
    ```
 
@@ -51,7 +51,7 @@ Before starting, install:
 ## Step 2: Install Python Server (2 minutes)
 
 ```bash
-cd godot-mcp-enhanced/python
+cd Claude-GoDot-MCP/python
 uv venv
 uv pip install -e .
 ```
@@ -74,7 +74,7 @@ Create `.kiro/settings/mcp.json` in your Godot project root:
     "godot-mcp-enhanced": {
       "command": "uv",
       "args": ["run", "python", "-m", "mcp_server"],
-      "cwd": "D:/path/to/godot-mcp-enhanced/python",
+      "cwd": "D:/path/to/Claude-GoDot-MCP/python",
       "env": {
         "GODOT_HOST": "127.0.0.1",
         "GDAI_MCP_SERVER_PORT": "3571"
@@ -96,7 +96,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
     "godot-mcp-enhanced": {
       "command": "uv",
       "args": ["run", "python", "-m", "mcp_server"],
-      "cwd": "/path/to/godot-mcp-enhanced/python",
+      "cwd": "/path/to/Claude-GoDot-MCP/python",
       "env": {
         "GODOT_HOST": "127.0.0.1",
         "GDAI_MCP_SERVER_PORT": "3571"
@@ -194,8 +194,8 @@ Now create a game scene using the sprites you found
 
 ### Get Help
 
-- **Issues**: [GitHub Issues](https://github.com/Rufaty/godot-mcp-enhanced/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Rufaty/godot-mcp-enhanced/discussions)
+- **Issues**: [GitHub Issues](https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/discussions)
 - **Documentation**: [Full Docs](docs/)
 
 ---

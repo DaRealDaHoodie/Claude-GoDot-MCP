@@ -145,7 +145,7 @@ All tests passed!
 
 **Windows**:
 ```bash
-.venv\Scripts\python.exe -c "import httpx; import asyncio; print(asyncio.run(httpx.AsyncClient().get('http://127.0.0.1:3571/project_info')).json())"
+.venv\Scripts\python.exe -c "import httpx; import asyncio; print(asyncio.run(httpx.AsyncClient().get('http://127.0.0.1:3571/api/project/info')).json())"
 ```
 
 **Expected Output**: JSON with project information
@@ -314,7 +314,7 @@ If tests fail:
    - Check firewall settings
 
 3. **Report issues**:
-   - [GitHub Issues](https://github.com/Rufaty/godot-mcp-enhanced/issues)
+   - [GitHub Issues](https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/issues)
    - Include test results and error messages
    - Specify OS, Python version, Godot version
 

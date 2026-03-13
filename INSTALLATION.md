@@ -38,8 +38,8 @@ uv --version
 ### 2. Install Godot Plugin
 
 1. **Download** the plugin:
-   - Go to [Releases](https://github.com/Rufaty/godot-mcp-enhanced/releases)
-   - Download `godot-mcp-enhanced-v1.0.0.zip`
+   - Go to [Releases](https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/releases)
+   - Download `Claude-GoDot-MCP-v1.1.0.zip`
 
 2. **Extract** the archive
 
@@ -129,7 +129,7 @@ uv --version
 
 ### 2. Install Godot Plugin
 
-1. **Download** the plugin from [Releases](https://github.com/Rufaty/godot-mcp-enhanced/releases)
+1. **Download** the plugin from [Releases](https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/releases)
 
 2. **Extract** and copy to your project:
    ```bash
@@ -150,7 +150,7 @@ uv --version
 ### 3. Setup Python Server
 
 ```bash
-cd /path/to/godot-mcp-enhanced/python
+cd /path/to/Claude-GoDot-MCP/python
 
 # Create virtual environment and install
 uv venv
@@ -175,7 +175,7 @@ Create `.windsurf/mcp.json`:
         "-m",
         "mcp_server"
       ],
-      "cwd": "/Users/yourname/path/to/godot-mcp-enhanced/python",
+      "cwd": "/Users/yourname/path/to/Claude-GoDot-MCP/python",
       "env": {
         "GDAI_MCP_SERVER_PORT": "3571",
         "GDAI_RUNTIME_SERVER_PORT": "3572",
@@ -226,8 +226,8 @@ uv --version
 
 ```bash
 # Download and extract
-wget https://github.com/Rufaty/godot-mcp-enhanced/releases/download/v1.0.0/godot-mcp-enhanced-v1.0.0.zip
-unzip godot-mcp-enhanced-v1.0.0.zip
+wget https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/releases/download/v1.0.0/Claude-GoDot-MCP-v1.1.0.zip
+unzip Claude-GoDot-MCP-v1.1.0.zip
 
 # Copy to your project
 cp -r addons/godot_mcp_enhanced /path/to/YourGodotProject/addons/
@@ -239,7 +239,7 @@ cp -r addons/godot_mcp_enhanced /path/to/YourGodotProject/addons/
 ### 3. Setup Python Server
 
 ```bash
-cd /path/to/godot-mcp-enhanced/python
+cd /path/to/Claude-GoDot-MCP/python
 
 # Create virtual environment and install
 uv venv
@@ -264,7 +264,7 @@ Create `.windsurf/mcp.json`:
         "-m",
         "mcp_server"
       ],
-      "cwd": "/home/yourname/path/to/godot-mcp-enhanced/python",
+      "cwd": "/home/yourname/path/to/Claude-GoDot-MCP/python",
       "env": {
         "GDAI_MCP_SERVER_PORT": "3571",
         "GDAI_RUNTIME_SERVER_PORT": "3572",
@@ -289,7 +289,7 @@ Create `.windsurf/mcp.json`:
 ### 2. Test Python Server
 
 ```bash
-cd godot-mcp-enhanced/python
+cd Claude-GoDot-MCP/python
 
 # Run server manually
 uv run python -m mcp_server
@@ -333,7 +333,7 @@ Once installed, try these commands:
 ### Update Python Server
 
 ```bash
-cd godot-mcp-enhanced/python
+cd Claude-GoDot-MCP/python
 git pull  # If using git
 uv pip install -e . --force-reinstall
 ```
@@ -352,7 +352,7 @@ uv pip install -e . --force-reinstall
 
 ```bash
 # Remove virtual environment
-cd godot-mcp-enhanced/python
+cd Claude-GoDot-MCP/python
 rm -rf .venv
 
 # Remove from AI client config
@@ -395,7 +395,7 @@ source ~/.bashrc  # or ~/.zshrc
 
 ```bash
 # Fix permissions
-chmod +x /path/to/godot-mcp-enhanced/python/mcp_server.py
+chmod +x /path/to/Claude-GoDot-MCP/python/mcp_server.py
 ```
 
 ### Port Already in Use
@@ -437,8 +437,8 @@ If you encounter issues:
    - Verify all paths are correct
 
 3. **Get support**:
-   - [GitHub Issues](https://github.com/Rufaty/godot-mcp-enhanced/issues)
-   - [Discussions](https://github.com/Rufaty/godot-mcp-enhanced/discussions)
+   - [GitHub Issues](https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/issues)
+   - [Discussions](https://github.com/DaRealDaHoodie/Claude-GoDot-MCP/discussions)
 
 ---
 
