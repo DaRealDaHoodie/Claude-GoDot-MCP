@@ -38,7 +38,7 @@ async def resolve_res_path(res_path: str) -> str:
         return res_path
     if _godot_project_path is None:
         try:
-            result = await call_godot_api("/project_info")
+            result = await call_godot_api("/api/project/info")
             _godot_project_path = result.get("data", {}).get("project_path", "")
         except Exception:
             _godot_project_path = ""
