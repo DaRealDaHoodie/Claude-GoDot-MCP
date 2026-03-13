@@ -466,3 +466,335 @@ func _get_anchor_preset_value(preset_name: String) -> int:
 		"hcenter_wide": return Control.PRESET_HCENTER_WIDE
 		"full_rect": return Control.PRESET_FULL_RECT
 		_: return Control.PRESET_TOP_LEFT
+
+
+func save_scene() -> Dictionary:
+	"""Save the current open scene to disk"""
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var scene_path = root.scene_file_path
+	if scene_path == "":
+		return {"success": false, "error": "Scene has no file path (use save_scene_as)"}
+
+	var packed = PackedScene.new()
+	var err = packed.pack(root)
+	if err != OK:
+		return {"success": false, "error": "Failed to pack scene: " + error_string(err)}
+
+	err = ResourceSaver.save(packed, scene_path)
+	if err != OK:
+		return {"success": false, "error": "Failed to save scene: " + error_string(err)}
+
+	editor_interface.get_resource_filesystem().scan()
+	print("[Scene Operations] Saved scene: ", scene_path)
+	return {"success": true, "data": {"scene_path": scene_path}}
+
+
+func rename_node(params: Dictionary) -> Dictionary:
+	"""Rename a node in the current scene"""
+	var node_path = params.get("node_path", "")
+	var new_name = params.get("new_name", "")
+
+	if new_name == "":
+		return {"success": false, "error": "new_name cannot be empty"}
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var node = root.get_node_or_null(node_path)
+	if not node:
+		return {"success": false, "error": "Node not found: " + node_path}
+
+	if node == root:
+		return {"success": false, "error": "Cannot rename root node via this tool"}
+
+	var old_name = node.name
+	node.name = new_name
+
+	print("[Scene Operations] Renamed node: ", old_name, " -> ", new_name)
+	return {"success": true, "data": {"old_name": old_name, "new_name": node.name, "new_path": str(node.get_path())}}
+
+
+func reorder_node(params: Dictionary) -> Dictionary:
+	"""Move a node to a specific child index within its parent"""
+	var node_path = params.get("node_path", "")
+	var new_index = params.get("new_index", 0)
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var node = root.get_node_or_null(node_path)
+	if not node:
+		return {"success": false, "error": "Node not found: " + node_path}
+
+	var parent = node.get_parent()
+	if not parent:
+		return {"success": false, "error": "Node has no parent"}
+
+	parent.move_child(node, new_index)
+
+	print("[Scene Operations] Reordered node: ", node_path, " to index ", new_index)
+	return {"success": true, "data": {"node_path": str(node.get_path()), "new_index": node.get_index()}}
+
+
+func find_nodes(params: Dictionary) -> Dictionary:
+	"""Find all nodes in the scene matching type and/or name pattern"""
+	var node_type = params.get("node_type", "")
+	var name_pattern = params.get("name_pattern", "")
+	var recursive = params.get("recursive", true)
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var found = []
+	_find_nodes_recursive(root, node_type, name_pattern, found)
+
+	return {"success": true, "data": {"nodes": found, "count": found.size()}}
+
+
+func _find_nodes_recursive(node: Node, node_type: String, name_pattern: String, found: Array) -> void:
+	var type_match = node_type == "" or node.is_class(node_type)
+	var name_match = name_pattern == "" or node.name.match(name_pattern)
+
+	if type_match and name_match:
+		found.append({
+			"name": node.name,
+			"type": node.get_class(),
+			"path": str(node.get_path())
+		})
+
+	for child in node.get_children():
+		_find_nodes_recursive(child, node_type, name_pattern, found)
+
+
+func get_node_signals(params: Dictionary) -> Dictionary:
+	"""List all signals available on a node"""
+	var node_path = params.get("node_path", "")
+	var include_inherited = params.get("include_inherited", true)
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var node = root.get_node_or_null(node_path)
+	if not node:
+		return {"success": false, "error": "Node not found: " + node_path}
+
+	var signals = []
+	for sig in node.get_signal_list():
+		signals.append({
+			"name": sig.name,
+			"args": sig.args
+		})
+
+	# Also get connections
+	var connections = []
+	for sig in node.get_signal_list():
+		for conn in node.get_signal_connection_list(sig.name):
+			connections.append({
+				"signal": sig.name,
+				"target": str(conn.callable.get_object()),
+				"method": conn.callable.get_method(),
+				"flags": conn.flags
+			})
+
+	return {
+		"success": true,
+		"data": {
+			"node_path": node_path,
+			"node_type": node.get_class(),
+			"signals": signals,
+			"connections": connections
+		}
+	}
+
+
+func connect_signal(params: Dictionary) -> Dictionary:
+	"""Connect a signal from source node to a method on target node"""
+	var source_path = params.get("source_node_path", "")
+	var signal_name = params.get("signal_name", "")
+	var target_path = params.get("target_node_path", "")
+	var method_name = params.get("method_name", "")
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var source = root.get_node_or_null(source_path)
+	if not source:
+		return {"success": false, "error": "Source node not found: " + source_path}
+
+	var target = root.get_node_or_null(target_path)
+	if not target:
+		return {"success": false, "error": "Target node not found: " + target_path}
+
+	if not source.has_signal(signal_name):
+		return {"success": false, "error": "Signal '%s' not found on %s" % [signal_name, source_path]}
+
+	if not target.has_method(method_name):
+		return {"success": false, "error": "Method '%s' not found on %s" % [method_name, target_path]}
+
+	if source.is_connected(signal_name, Callable(target, method_name)):
+		return {"success": false, "error": "Signal already connected"}
+
+	source.connect(signal_name, Callable(target, method_name))
+
+	print("[Scene Operations] Connected signal: ", source_path, ".", signal_name, " -> ", target_path, ".", method_name)
+	return {"success": true, "data": {"source": source_path, "signal": signal_name, "target": target_path, "method": method_name}}
+
+
+func disconnect_signal(params: Dictionary) -> Dictionary:
+	"""Disconnect a signal connection"""
+	var source_path = params.get("source_node_path", "")
+	var signal_name = params.get("signal_name", "")
+	var target_path = params.get("target_node_path", "")
+	var method_name = params.get("method_name", "")
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var source = root.get_node_or_null(source_path)
+	if not source:
+		return {"success": false, "error": "Source node not found: " + source_path}
+
+	var target = root.get_node_or_null(target_path)
+	if not target:
+		return {"success": false, "error": "Target node not found: " + target_path}
+
+	if not source.is_connected(signal_name, Callable(target, method_name)):
+		return {"success": false, "error": "Signal is not connected"}
+
+	source.disconnect(signal_name, Callable(target, method_name))
+
+	print("[Scene Operations] Disconnected signal: ", source_path, ".", signal_name, " -> ", target_path, ".", method_name)
+	return {"success": true}
+
+
+func add_to_group(params: Dictionary) -> Dictionary:
+	"""Add a node to a group"""
+	var node_path = params.get("node_path", "")
+	var group_name = params.get("group_name", "")
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var node = root.get_node_or_null(node_path)
+	if not node:
+		return {"success": false, "error": "Node not found: " + node_path}
+
+	node.add_to_group(group_name, true)  # persistent=true so it's saved in scene
+
+	print("[Scene Operations] Added node to group: ", node_path, " -> ", group_name)
+	return {"success": true, "data": {"node_path": node_path, "group": group_name}}
+
+
+func remove_from_group(params: Dictionary) -> Dictionary:
+	"""Remove a node from a group"""
+	var node_path = params.get("node_path", "")
+	var group_name = params.get("group_name", "")
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var node = root.get_node_or_null(node_path)
+	if not node:
+		return {"success": false, "error": "Node not found: " + node_path}
+
+	if not node.is_in_group(group_name):
+		return {"success": false, "error": "Node is not in group: " + group_name}
+
+	node.remove_from_group(group_name)
+
+	print("[Scene Operations] Removed node from group: ", node_path, " <- ", group_name)
+	return {"success": true}
+
+
+func get_node_groups(params: Dictionary) -> Dictionary:
+	"""Get all groups a node belongs to"""
+	var node_path = params.get("node_path", "")
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var node = root.get_node_or_null(node_path)
+	if not node:
+		return {"success": false, "error": "Node not found: " + node_path}
+
+	return {"success": true, "data": {"node_path": node_path, "groups": node.get_groups()}}
+
+
+func batch_set_properties(params: Dictionary) -> Dictionary:
+	"""Set multiple properties on multiple nodes at once"""
+	# params.operations = [{node_path, property, value}, ...]
+	var operations = params.get("operations", [])
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var results = []
+	var errors = []
+
+	for op in operations:
+		var node_path = op.get("node_path", "")
+		var property = op.get("property", "")
+		var value = op.get("value")
+
+		var node = root.get_node_or_null(node_path)
+		if not node:
+			errors.append("Node not found: " + node_path)
+			continue
+
+		if not property in node:
+			errors.append("Property '%s' not found on %s" % [property, node_path])
+			continue
+
+		node.set(property, value)
+		results.append({"node": node_path, "property": property, "set": true})
+
+	emit_signal("scene_modified", "")
+	return {
+		"success": errors.size() == 0,
+		"data": {"applied": results, "errors": errors}
+	}
+
+
+func get_class_property_list(params: Dictionary) -> Dictionary:
+	"""Get all available properties for a Godot class by name"""
+	var class_name_str = params.get("class_name", "")
+
+	if class_name_str == "":
+		return {"success": false, "error": "class_name is required"}
+
+	if not ClassDB.class_exists(class_name_str):
+		return {"success": false, "error": "Class not found: " + class_name_str}
+
+	var props = []
+	for p in ClassDB.class_get_property_list(class_name_str, false):
+		if p.usage & PROPERTY_USAGE_EDITOR:
+			props.append({
+				"name": p.name,
+				"type": type_string(p.type),
+				"hint": p.hint,
+				"hint_string": p.hint_string,
+				"usage": p.usage
+			})
+
+	return {
+		"success": true,
+		"data": {
+			"class_name": class_name_str,
+			"parent_class": ClassDB.get_parent_class(class_name_str),
+			"properties": props,
+			"count": props.size()
+		}
+	}

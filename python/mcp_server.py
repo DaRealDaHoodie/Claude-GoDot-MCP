@@ -887,6 +887,199 @@ async def list_tools() -> list[Tool]:
                 "required": []
             }
         ),
+
+        # New Scene Tools
+        Tool(
+            name="save_scene",
+            description="Save the current open scene to disk. IMPORTANT: Call this after making node/property changes to persist them.",
+            inputSchema={"type": "object", "properties": {}, "required": []}
+        ),
+        Tool(
+            name="rename_node",
+            description="Rename a node in the current scene",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the node (e.g., 'Player' or 'Player/Sprite2D')"},
+                    "new_name": {"type": "string", "description": "New name for the node"}
+                },
+                "required": ["node_path", "new_name"]
+            }
+        ),
+        Tool(
+            name="reorder_node",
+            description="Move a node to a specific child index within its parent (affects draw order and processing order)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the node"},
+                    "new_index": {"type": "integer", "description": "New child index (0 = first)"}
+                },
+                "required": ["node_path", "new_index"]
+            }
+        ),
+        Tool(
+            name="find_nodes",
+            description="Find all nodes in the current scene matching a type and/or name pattern",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_type": {"type": "string", "description": "Godot class name to filter by (e.g., 'Sprite2D', 'CharacterBody2D'). Empty = any type."},
+                    "name_pattern": {"type": "string", "description": "Name glob pattern (e.g., 'Enemy*', 'Player'). Empty = any name."}
+                },
+                "required": []
+            }
+        ),
+        Tool(
+            name="get_node_signals",
+            description="List all signals available on a node and its current signal connections",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the node"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="connect_signal",
+            description="Connect a signal from a source node to a method on a target node",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "source_node_path": {"type": "string", "description": "Path to the node emitting the signal"},
+                    "signal_name": {"type": "string", "description": "Name of the signal to connect (e.g., 'body_entered', 'pressed', 'timeout')"},
+                    "target_node_path": {"type": "string", "description": "Path to the node that handles the signal"},
+                    "method_name": {"type": "string", "description": "Method name on the target node to call (e.g., '_on_body_entered')"}
+                },
+                "required": ["source_node_path", "signal_name", "target_node_path", "method_name"]
+            }
+        ),
+        Tool(
+            name="disconnect_signal",
+            description="Disconnect a signal connection between two nodes",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "source_node_path": {"type": "string"},
+                    "signal_name": {"type": "string"},
+                    "target_node_path": {"type": "string"},
+                    "method_name": {"type": "string"}
+                },
+                "required": ["source_node_path", "signal_name", "target_node_path", "method_name"]
+            }
+        ),
+        Tool(
+            name="add_to_group",
+            description="Add a node to a named group (persistent - saved in scene file). Groups enable calling methods on all group members at once.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the node"},
+                    "group_name": {"type": "string", "description": "Group name (e.g., 'enemies', 'collectibles', 'player')"}
+                },
+                "required": ["node_path", "group_name"]
+            }
+        ),
+        Tool(
+            name="remove_from_group",
+            description="Remove a node from a group",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string"},
+                    "group_name": {"type": "string"}
+                },
+                "required": ["node_path", "group_name"]
+            }
+        ),
+        Tool(
+            name="get_node_groups",
+            description="Get all groups a node belongs to",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="batch_set_properties",
+            description="Set multiple properties on multiple nodes in a single call. More efficient than repeated update_property calls.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operations": {
+                        "type": "array",
+                        "description": "List of {node_path, property, value} operations",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "node_path": {"type": "string"},
+                                "property": {"type": "string"},
+                                "value": {"description": "The value to set"}
+                            },
+                            "required": ["node_path", "property", "value"]
+                        }
+                    }
+                },
+                "required": ["operations"]
+            }
+        ),
+        Tool(
+            name="get_class_property_list",
+            description="Get all available properties for a Godot class by name. Use this to discover what properties you can set on a node type before using add_node or update_property.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "class_name": {"type": "string", "description": "Godot class name (e.g., 'CharacterBody2D', 'Sprite2D', 'Label')"}
+                },
+                "required": ["class_name"]
+            }
+        ),
+
+        # Autoload / Project Configuration Tools
+        Tool(
+            name="get_autoloads",
+            description="List all autoload singletons configured in the project (Project Settings > Globals > Autoload)",
+            inputSchema={"type": "object", "properties": {}, "required": []}
+        ),
+        Tool(
+            name="add_autoload",
+            description="Add an autoload singleton to the project. These are globally accessible scripts (e.g., GameManager, AudioManager).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Singleton name used to access it (e.g., 'GameManager')"},
+                    "path": {"type": "string", "description": "Path to the GDScript file (e.g., 'res://scripts/game_manager.gd')"},
+                    "singleton": {"type": "boolean", "description": "Make it a singleton (true) or just autoloaded (false). Default: true", "default": True}
+                },
+                "required": ["name", "path"]
+            }
+        ),
+        Tool(
+            name="remove_autoload",
+            description="Remove an autoload singleton from the project",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Name of the autoload to remove"}
+                },
+                "required": ["name"]
+            }
+        ),
+        Tool(
+            name="set_main_scene",
+            description="Set the project's main scene (the scene that runs when you press Play or export the game)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "scene_path": {"type": "string", "description": "Path to the scene file (e.g., 'res://scenes/main.tscn')"}
+                },
+                "required": ["scene_path"]
+            }
+        ),
     ]
 
 
@@ -944,15 +1137,38 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
         # Runtime operations
         "simulate_key_press": "/api/runtime/simulate_key",
         "simulate_action": "/api/runtime/simulate_action",
-        "get_runtime_stats": "/api/runtime/get_runtime_stats",
-        "get_node_properties": "/api/runtime/get_node_properties",
-        "call_node_method": "/api/runtime/call_node_method",
-        "get_installed_plugins": "/api/runtime/get_installed_plugins",
-        "get_plugin_info": "/api/runtime/get_plugin_info",
-        "get_assets_by_type": "/api/runtime/get_assets_by_type",
-        "get_asset_info": "/api/runtime/get_asset_info",
-        "run_test_script": "/api/runtime/run_test_script",
-        "get_input_actions": "/api/runtime/get_input_actions",
+        "simulate_mouse_button": "/api/runtime/simulate_mouse_button",
+        "simulate_mouse_motion": "/api/runtime/simulate_mouse_motion",
+        "get_runtime_stats": "/api/runtime/stats",
+        "get_node_properties": "/api/runtime/node_properties",
+        "get_node_methods": "/api/runtime/node_methods",
+        "call_node_method": "/api/runtime/call_method",
+        "get_installed_plugins": "/api/runtime/plugins",
+        "get_plugin_info": "/api/runtime/plugin_info",
+        "get_assets_by_type": "/api/runtime/assets_by_type",
+        "get_asset_info": "/api/runtime/asset_info",
+        "run_test_script": "/api/runtime/run_test",
+        "get_input_actions": "/api/runtime/input_actions",
+
+        # New scene tools
+        "save_scene": "/api/scene/save",
+        "rename_node": "/api/node/rename",
+        "reorder_node": "/api/node/reorder",
+        "find_nodes": "/api/node/find",
+        "get_node_signals": "/api/node/signals",
+        "connect_signal": "/api/node/connect_signal",
+        "disconnect_signal": "/api/node/disconnect_signal",
+        "add_to_group": "/api/node/add_to_group",
+        "remove_from_group": "/api/node/remove_from_group",
+        "get_node_groups": "/api/node/get_groups",
+        "batch_set_properties": "/api/node/batch_set_properties",
+        "get_class_property_list": "/api/node/class_properties",
+
+        # Autoload / project configuration tools
+        "get_autoloads": "/api/project/autoloads",
+        "add_autoload": "/api/project/autoload_add",
+        "remove_autoload": "/api/project/autoload_remove",
+        "set_main_scene": "/api/project/set_main_scene",
     }
     
     # Handle Godot process management tools (don't need Godot running)

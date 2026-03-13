@@ -190,6 +190,42 @@ func _setup_http_routes() -> void:
 	http_server.register_route("/api/windsurf/context", _handle_get_windsurf_context)
 	http_server.register_route("/api/windsurf/live_preview", _handle_get_live_preview)
 
+	# Autoload tools
+	http_server.register_route("/api/project/autoloads", _handle_get_autoloads)
+	http_server.register_route("/api/project/autoload_add", _handle_add_autoload)
+	http_server.register_route("/api/project/autoload_remove", _handle_remove_autoload)
+	http_server.register_route("/api/project/set_main_scene", _handle_set_main_scene)
+
+	# New scene/node tools
+	http_server.register_route("/api/scene/save", _handle_save_scene)
+	http_server.register_route("/api/node/rename", _handle_rename_node)
+	http_server.register_route("/api/node/reorder", _handle_reorder_node)
+	http_server.register_route("/api/node/find", _handle_find_nodes)
+	http_server.register_route("/api/node/signals", _handle_get_node_signals)
+	http_server.register_route("/api/node/connect_signal", _handle_connect_signal)
+	http_server.register_route("/api/node/disconnect_signal", _handle_disconnect_signal)
+	http_server.register_route("/api/node/add_to_group", _handle_add_to_group)
+	http_server.register_route("/api/node/remove_from_group", _handle_remove_from_group)
+	http_server.register_route("/api/node/get_groups", _handle_get_node_groups)
+	http_server.register_route("/api/node/batch_set_properties", _handle_batch_set_properties)
+	http_server.register_route("/api/node/class_properties", _handle_get_class_property_list)
+
+	# Runtime tools (fix: these were missing before)
+	http_server.register_route("/api/runtime/simulate_key", _handle_simulate_key_press)
+	http_server.register_route("/api/runtime/simulate_action", _handle_simulate_action)
+	http_server.register_route("/api/runtime/simulate_mouse_button", _handle_simulate_mouse_button)
+	http_server.register_route("/api/runtime/simulate_mouse_motion", _handle_simulate_mouse_motion)
+	http_server.register_route("/api/runtime/input_actions", _handle_get_input_actions)
+	http_server.register_route("/api/runtime/node_properties", _handle_get_node_properties)
+	http_server.register_route("/api/runtime/node_methods", _handle_get_node_methods)
+	http_server.register_route("/api/runtime/call_method", _handle_call_node_method)
+	http_server.register_route("/api/runtime/stats", _handle_get_runtime_stats)
+	http_server.register_route("/api/runtime/plugins", _handle_get_installed_plugins)
+	http_server.register_route("/api/runtime/plugin_info", _handle_get_plugin_info)
+	http_server.register_route("/api/runtime/run_test", _handle_run_test_script)
+	http_server.register_route("/api/runtime/assets_by_type", _handle_get_assets_by_type)
+	http_server.register_route("/api/runtime/asset_info", _handle_get_asset_info)
+
 
 func _create_bottom_panel() -> void:
 	bottom_panel = preload("res://addons/godot_mcp_enhanced/ui/bottom_panel.tscn").instantiate()
@@ -400,21 +436,21 @@ func _on_config_changed(new_config: Dictionary) -> void:
 func _on_server_restart_requested() -> void:
 	print("[Godot MCP Enhanced] ========================================")
 	print("[Godot MCP Enhanced] Restarting server...")
-	
+
 	# Stop server
 	http_server.stop_server()
 	if bottom_panel:
 		bottom_panel.update_server_status(false)
-	
+
 	print("[Godot MCP Enhanced] Server stopped, waiting 1 second...")
 	await get_tree().create_timer(1.0).timeout
-	
+
 	# Start server
 	var port = int(config.get("GDAI_MCP_SERVER_PORT", 3571))
 	print("[Godot MCP Enhanced] Starting server on port %d..." % port)
-	
+
 	var success = http_server.start_server(port)
-	
+
 	if success:
 		print("[Godot MCP Enhanced] ✓ Server restarted successfully on port %d" % port)
 		if bottom_panel:
@@ -424,5 +460,191 @@ func _on_server_restart_requested() -> void:
 		push_error("[Godot MCP Enhanced] Check if port is already in use")
 		if bottom_panel:
 			bottom_panel.update_server_status(false)
-	
+
 	print("[Godot MCP Enhanced] ========================================")
+
+
+# Autoload handlers
+func _handle_get_autoloads(params: Dictionary) -> Dictionary:
+	var autoloads = []
+	for prop in ProjectSettings.get_property_list():
+		if prop.name.begins_with("autoload/"):
+			var name = prop.name.substr("autoload/".length())
+			var value = ProjectSettings.get_setting(prop.name, "")
+			autoloads.append({
+				"name": name,
+				"path": value.trim_prefix("*"),
+				"singleton": value.begins_with("*")
+			})
+	return {"success": true, "data": {"autoloads": autoloads}}
+
+
+func _handle_add_autoload(params: Dictionary) -> Dictionary:
+	var name = params.get("name", "")
+	var path = params.get("path", "")
+	var singleton = params.get("singleton", true)
+
+	if name == "" or path == "":
+		return {"success": false, "error": "name and path are required"}
+
+	get_editor_interface().get_editor_settings()
+	var value = ("*" if singleton else "") + path
+	ProjectSettings.set_setting("autoload/" + name, value)
+	ProjectSettings.save()
+	return {"success": true, "data": {"name": name, "path": path}}
+
+
+func _handle_remove_autoload(params: Dictionary) -> Dictionary:
+	var name = params.get("name", "")
+	if name == "":
+		return {"success": false, "error": "name is required"}
+
+	var key = "autoload/" + name
+	if not ProjectSettings.has_setting(key):
+		return {"success": false, "error": "Autoload not found: " + name}
+
+	ProjectSettings.set_setting(key, null)
+	ProjectSettings.save()
+	return {"success": true}
+
+
+func _handle_set_main_scene(params: Dictionary) -> Dictionary:
+	var scene_path = params.get("scene_path", "")
+	if scene_path == "":
+		return {"success": false, "error": "scene_path is required"}
+	if not scene_path.begins_with("res://"):
+		scene_path = "res://" + scene_path
+	if not FileAccess.file_exists(scene_path):
+		return {"success": false, "error": "Scene not found: " + scene_path}
+
+	ProjectSettings.set_setting("application/run/main_scene", scene_path)
+	ProjectSettings.save()
+	return {"success": true, "data": {"main_scene": scene_path}}
+
+
+# New scene/node handlers
+func _handle_save_scene(params: Dictionary) -> Dictionary:
+	return scene_operations.save_scene()
+
+
+func _handle_rename_node(params: Dictionary) -> Dictionary:
+	return scene_operations.rename_node(params)
+
+
+func _handle_reorder_node(params: Dictionary) -> Dictionary:
+	return scene_operations.reorder_node(params)
+
+
+func _handle_find_nodes(params: Dictionary) -> Dictionary:
+	return scene_operations.find_nodes(params)
+
+
+func _handle_get_node_signals(params: Dictionary) -> Dictionary:
+	return scene_operations.get_node_signals(params)
+
+
+func _handle_connect_signal(params: Dictionary) -> Dictionary:
+	return scene_operations.connect_signal(params)
+
+
+func _handle_disconnect_signal(params: Dictionary) -> Dictionary:
+	return scene_operations.disconnect_signal(params)
+
+
+func _handle_add_to_group(params: Dictionary) -> Dictionary:
+	return scene_operations.add_to_group(params)
+
+
+func _handle_remove_from_group(params: Dictionary) -> Dictionary:
+	return scene_operations.remove_from_group(params)
+
+
+func _handle_get_node_groups(params: Dictionary) -> Dictionary:
+	return scene_operations.get_node_groups(params)
+
+
+func _handle_batch_set_properties(params: Dictionary) -> Dictionary:
+	return scene_operations.batch_set_properties(params)
+
+
+func _handle_get_class_property_list(params: Dictionary) -> Dictionary:
+	return scene_operations.get_class_property_list(params)
+
+
+# Runtime handlers (fix: these were missing)
+func _handle_simulate_key_press(params: Dictionary) -> Dictionary:
+	var keycode = params.get("keycode", 0)
+	var pressed = params.get("pressed", true)
+	return runtime_operations.simulate_key_press(keycode, pressed)
+
+
+func _handle_simulate_action(params: Dictionary) -> Dictionary:
+	var action_name = params.get("action_name", "")
+	var pressed = params.get("pressed", true)
+	var strength = float(params.get("strength", 1.0))
+	return runtime_operations.simulate_action(action_name, pressed, strength)
+
+
+func _handle_simulate_mouse_button(params: Dictionary) -> Dictionary:
+	var button_index = params.get("button_index", 1)
+	var pressed = params.get("pressed", true)
+	var pos_x = float(params.get("position_x", 0.0))
+	var pos_y = float(params.get("position_y", 0.0))
+	return runtime_operations.simulate_mouse_button(button_index, pressed, Vector2(pos_x, pos_y))
+
+
+func _handle_simulate_mouse_motion(params: Dictionary) -> Dictionary:
+	var pos_x = float(params.get("position_x", 0.0))
+	var pos_y = float(params.get("position_y", 0.0))
+	var rel_x = float(params.get("relative_x", 0.0))
+	var rel_y = float(params.get("relative_y", 0.0))
+	return runtime_operations.simulate_mouse_motion(Vector2(pos_x, pos_y), Vector2(rel_x, rel_y))
+
+
+func _handle_get_input_actions(params: Dictionary) -> Dictionary:
+	return runtime_operations.get_input_actions()
+
+
+func _handle_get_node_properties(params: Dictionary) -> Dictionary:
+	var node_path = params.get("node_path", "")
+	return runtime_operations.get_node_properties(node_path)
+
+
+func _handle_get_node_methods(params: Dictionary) -> Dictionary:
+	var node_path = params.get("node_path", "")
+	return runtime_operations.get_node_methods(node_path)
+
+
+func _handle_call_node_method(params: Dictionary) -> Dictionary:
+	var node_path = params.get("node_path", "")
+	var method_name = params.get("method_name", "")
+	var args = params.get("args", [])
+	return runtime_operations.call_node_method(node_path, method_name, args)
+
+
+func _handle_get_runtime_stats(params: Dictionary) -> Dictionary:
+	return runtime_operations.get_runtime_stats()
+
+
+func _handle_get_installed_plugins(params: Dictionary) -> Dictionary:
+	return runtime_operations.get_installed_plugins()
+
+
+func _handle_get_plugin_info(params: Dictionary) -> Dictionary:
+	var plugin_name = params.get("plugin_name", "")
+	return runtime_operations.get_plugin_info(plugin_name)
+
+
+func _handle_run_test_script(params: Dictionary) -> Dictionary:
+	var script_path = params.get("script_path", "")
+	return runtime_operations.run_test_script(script_path)
+
+
+func _handle_get_assets_by_type(params: Dictionary) -> Dictionary:
+	var asset_type = params.get("asset_type", "texture")
+	return runtime_operations.get_assets_by_type(asset_type)
+
+
+func _handle_get_asset_info(params: Dictionary) -> Dictionary:
+	var asset_path = params.get("asset_path", "")
+	return runtime_operations.get_asset_info(asset_path)
