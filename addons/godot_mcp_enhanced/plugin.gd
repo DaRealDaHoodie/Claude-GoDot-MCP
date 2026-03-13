@@ -791,11 +791,11 @@ func _handle_disconnect_signal(params: Dictionary) -> Dictionary:
 
 
 func _handle_add_to_group(params: Dictionary) -> Dictionary:
-	return scene_operations.add_to_group(params)
+	return scene_operations.add_node_to_group(params)
 
 
 func _handle_remove_from_group(params: Dictionary) -> Dictionary:
-	return scene_operations.remove_from_group(params)
+	return scene_operations.remove_node_from_group(params)
 
 
 func _handle_get_node_groups(params: Dictionary) -> Dictionary:

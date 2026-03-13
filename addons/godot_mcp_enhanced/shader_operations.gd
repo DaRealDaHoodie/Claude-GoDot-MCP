@@ -170,8 +170,8 @@ func get_shader_parameters(params: Dictionary) -> Dictionary:
 	if not mat.shader:
 		return {"success": false, "error": "ShaderMaterial has no Shader assigned"}
 
-	# Use RenderingServer for the authoritative uniform list
-	var uniform_list = RenderingServer.shader_get_shader_uniform_list(mat.shader.get_rid())
+	# Use Shader.get_shader_uniform_list() — the Godot 4.x API
+	var uniform_list = mat.shader.get_shader_uniform_list()
 	var result = []
 	for uniform in uniform_list:
 		var name = uniform.get("name", "")

@@ -676,8 +676,7 @@ func disconnect_signal(params: Dictionary) -> Dictionary:
 	return {"success": true}
 
 
-func add_to_group(params: Dictionary) -> Dictionary:
-	"""Add a node to a group"""
+func add_node_to_group(params: Dictionary) -> Dictionary:
 	var node_path = params.get("node_path", "")
 	var group_name = params.get("group_name", "")
 
@@ -689,14 +688,13 @@ func add_to_group(params: Dictionary) -> Dictionary:
 	if not node:
 		return {"success": false, "error": "Node not found: " + node_path}
 
-	node.add_to_group(group_name, true)  # persistent=true so it's saved in scene
+	node.add_to_group(StringName(group_name), true)  # persistent=true so it's saved in scene
 
 	print("[Scene Operations] Added node to group: ", node_path, " -> ", group_name)
 	return {"success": true, "data": {"node_path": node_path, "group": group_name}}
 
 
-func remove_from_group(params: Dictionary) -> Dictionary:
-	"""Remove a node from a group"""
+func remove_node_from_group(params: Dictionary) -> Dictionary:
 	var node_path = params.get("node_path", "")
 	var group_name = params.get("group_name", "")
 
@@ -708,10 +706,10 @@ func remove_from_group(params: Dictionary) -> Dictionary:
 	if not node:
 		return {"success": false, "error": "Node not found: " + node_path}
 
-	if not node.is_in_group(group_name):
+	if not node.is_in_group(StringName(group_name)):
 		return {"success": false, "error": "Node is not in group: " + group_name}
 
-	node.remove_from_group(group_name)
+	node.remove_from_group(StringName(group_name))
 
 	print("[Scene Operations] Removed node from group: ", node_path, " <- ", group_name)
 	return {"success": true}
