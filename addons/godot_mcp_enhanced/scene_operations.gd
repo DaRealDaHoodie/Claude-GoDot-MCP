@@ -921,3 +921,58 @@ func _check_file_for_broken_refs(file_path: String, broken: Array) -> void:
 		# Check if the referenced file exists
 		if not FileAccess.file_exists(ref_path):
 			broken.append({"file": file_path, "missing_ref": ref_path})
+
+
+# ── Navigation Mesh Baking ────────────────────────────────────────────────────
+
+func bake_navigation_mesh(params: Dictionary) -> Dictionary:
+	"""Bake NavigationRegion2D/3D navigation meshes. Bakes all found if no node_path given."""
+	var node_path = params.get("node_path", "")
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	if node_path != "":
+		# Bake a specific navigation region
+		var node = root.get_node_or_null(node_path)
+		if not node:
+			# Also try absolute path from tree root
+			node = root.get_tree().root.get_node_or_null(node_path)
+		if not node:
+			return {"success": false, "error": "Node not found: " + node_path}
+
+		if node is NavigationRegion3D:
+			node.bake_navigation_mesh()
+			await node.bake_finished
+			return {"success": true, "data": {
+				"baked": [{"path": node_path, "type": "NavigationRegion3D"}], "count": 1
+			}}
+		elif node is NavigationRegion2D:
+			node.bake_navigation_polygon()
+			return {"success": true, "data": {
+				"baked": [{"path": node_path, "type": "NavigationRegion2D"}], "count": 1
+			}}
+		else:
+			return {"success": false, "error": "Node '%s' is %s, not NavigationRegion2D/3D" % [node_path, node.get_class()]}
+
+	# Auto-discover and bake all navigation regions in scene
+	var baked = []
+	_bake_nav_recursive(root, baked)
+
+	if baked.is_empty():
+		return {"success": false, "error": "No NavigationRegion2D or NavigationRegion3D nodes found in scene"}
+
+	print("[Scene Operations] Baked %d navigation region(s)" % baked.size())
+	return {"success": true, "data": {"baked": baked, "count": baked.size()}}
+
+
+func _bake_nav_recursive(node: Node, baked: Array) -> void:
+	if node is NavigationRegion3D:
+		node.bake_navigation_mesh()
+		baked.append({"path": str(node.get_path()), "type": "NavigationRegion3D"})
+	elif node is NavigationRegion2D:
+		node.bake_navigation_polygon()
+		baked.append({"path": str(node.get_path()), "type": "NavigationRegion2D"})
+	for child in node.get_children():
+		_bake_nav_recursive(child, baked)

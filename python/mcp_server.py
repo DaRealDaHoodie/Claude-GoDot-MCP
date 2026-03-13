@@ -1081,6 +1081,108 @@ async def list_tools() -> list[Tool]:
             }
         ),
 
+        # ── Import Settings ───────────────────────────────────────────────────
+        Tool(
+            name="get_import_settings",
+            description=(
+                "Read the current .import settings for an asset (texture, audio, model, etc). "
+                "Returns all sections including [params] which controls compression, mipmaps, "
+                "normal map flag, etc. Use before set_import_settings to see available keys."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "resource_path": {
+                        "type": "string",
+                        "description": "res:// path to the asset (e.g. 'res://sprites/player.png')"
+                    }
+                },
+                "required": ["resource_path"]
+            }
+        ),
+        Tool(
+            name="set_import_settings",
+            description=(
+                "Update .import settings for an asset and trigger a reimport. "
+                "Common texture params: compress/mode (0=lossless,1=lossy,2=vram_compressed), "
+                "compress/normal_map (0=disabled,1=enabled), mipmaps/generate (true/false). "
+                "Call get_import_settings first to discover available param names."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "resource_path": {
+                        "type": "string",
+                        "description": "res:// path to the asset"
+                    },
+                    "params": {
+                        "type": "object",
+                        "description": "Key-value pairs to set in the [params] section of the .import file",
+                        "additionalProperties": True
+                    }
+                },
+                "required": ["resource_path", "params"]
+            }
+        ),
+
+        # ── Undo / Redo ───────────────────────────────────────────────────────
+        Tool(
+            name="undo",
+            description=(
+                "Undo the last editor action in the current scene's undo history. "
+                "Works on actions recorded by Godot's EditorUndoRedoManager."
+            ),
+            inputSchema={"type": "object", "properties": {}, "required": []}
+        ),
+        Tool(
+            name="redo",
+            description=(
+                "Redo the last undone editor action in the current scene's undo history."
+            ),
+            inputSchema={"type": "object", "properties": {}, "required": []}
+        ),
+
+        # ── Navigation ────────────────────────────────────────────────────────
+        Tool(
+            name="bake_navigation_mesh",
+            description=(
+                "Bake NavigationMesh/NavigationPolygon for NavigationRegion3D or NavigationRegion2D nodes. "
+                "If node_path is omitted, finds and bakes ALL navigation regions in the scene. "
+                "Must have a NavigationMesh/NavigationPolygon resource assigned to the region first."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {
+                        "type": "string",
+                        "description": "Path to a specific NavigationRegion2D/3D. Omit to bake all."
+                    }
+                },
+                "required": []
+            }
+        ),
+
+        # ── Profiler ──────────────────────────────────────────────────────────
+        Tool(
+            name="get_profiler_snapshot",
+            description=(
+                "Sample Godot Performance monitors over N frames and return avg/min/max stats. "
+                "Metrics: fps, process_ms, physics_ms, draw_calls, nodes, objects, memory_mb, video_mem_mb. "
+                "Run while a scene is playing for game-specific data. Includes automatic bottleneck warnings."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "frame_count": {
+                        "type": "integer",
+                        "description": "Number of frames to sample (1–300, default 60 = ~1 second at 60fps)",
+                        "default": 60
+                    }
+                },
+                "required": []
+            }
+        ),
+
         # ── Previously wired but missing Tool() definitions ───────────────────
         Tool(
             name="get_node_methods",
@@ -1170,6 +1272,49 @@ async def list_tools() -> list[Tool]:
                     }
                 },
                 "required": ["preset_name", "output_path"]
+            }
+        ),
+
+        Tool(
+            name="create_export_preset",
+            description=(
+                "Create a new export preset entry in export_presets.cfg. "
+                "Supported platforms: 'Windows Desktop', 'Linux/X11', 'macOS', 'Web', 'Android', 'iOS'. "
+                "After creating, open Godot to configure export templates, then use export_project."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "preset_name": {
+                        "type": "string",
+                        "description": "Display name for this preset (e.g. 'Windows Release')"
+                    },
+                    "platform": {
+                        "type": "string",
+                        "description": "Target platform. Must match a Godot export platform name exactly."
+                    },
+                    "export_path": {
+                        "type": "string",
+                        "description": "Default output file path (e.g. 'builds/game.exe', 'builds/game.html')",
+                        "default": ""
+                    },
+                    "project_path": {
+                        "type": "string",
+                        "description": "Absolute path to the Godot project folder. Defaults to cwd."
+                    },
+                    "runnable": {
+                        "type": "boolean",
+                        "description": "Mark as the runnable preset for this platform (default: true)",
+                        "default": True
+                    },
+                    "options": {
+                        "type": "object",
+                        "description": "Additional platform-specific options to write into [preset.N.options]",
+                        "additionalProperties": True,
+                        "default": {}
+                    }
+                },
+                "required": ["preset_name", "platform"]
             }
         ),
 
@@ -1298,6 +1443,20 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
 
         # Resource health tools
         "scan_broken_resources": "/api/project/scan_broken_resources",
+
+        # Import settings tools
+        "get_import_settings": "/api/project/import_settings_get",
+        "set_import_settings": "/api/project/import_settings_set",
+
+        # Undo / Redo
+        "undo": "/api/editor/undo",
+        "redo": "/api/editor/redo",
+
+        # Navigation mesh baking
+        "bake_navigation_mesh": "/api/scene/bake_navigation",
+
+        # Profiler snapshot
+        "get_profiler_snapshot": "/api/runtime/profiler_snapshot",
     }
     
     # ── Export tools (Python subprocess, no Godot HTTP needed) ───────────────
@@ -1403,6 +1562,86 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
             return [TextContent(type="text", text=json.dumps({
                 "success": False,
                 "error": str(e)
+            }, indent=2))]
+
+    if name == "create_export_preset":
+        import configparser
+        preset_name = arguments.get("preset_name", "")
+        platform     = arguments.get("platform", "")
+        export_path  = arguments.get("export_path", "")
+        project_path = arguments.get("project_path", os.getcwd())
+        runnable     = arguments.get("runnable", True)
+        options      = arguments.get("options", {})
+
+        if not preset_name or not platform:
+            return [TextContent(type="text", text=json.dumps({
+                "success": False, "error": "preset_name and platform are required"
+            }, indent=2))]
+
+        presets_path = os.path.join(project_path, "export_presets.cfg")
+        cp = configparser.RawConfigParser()
+        cp.optionxform = str  # preserve case
+
+        if os.path.exists(presets_path):
+            with open(presets_path, "r", encoding="utf-8") as f:
+                cp.read_string(f.read())
+
+        # Find next available index; also check for duplicate name
+        idx = 0
+        while cp.has_section(f"preset.{idx}"):
+            existing = cp.get(f"preset.{idx}", "name", fallback="").strip('"')
+            if existing == preset_name:
+                return [TextContent(type="text", text=json.dumps({
+                    "success": False,
+                    "error": f"Preset '{preset_name}' already exists at index {idx}"
+                }, indent=2))]
+            idx += 1
+
+        sec = f"preset.{idx}"
+        cp.add_section(sec)
+        cp.set(sec, "name",                      f'"{preset_name}"')
+        cp.set(sec, "platform",                  f'"{platform}"')
+        cp.set(sec, "runnable",                  "true" if runnable else "false")
+        cp.set(sec, "dedicated_server",          "false")
+        cp.set(sec, "custom_features",           '""')
+        cp.set(sec, "export_filter",             '"all_resources"')
+        cp.set(sec, "include_filter",            '""')
+        cp.set(sec, "exclude_filter",            '""')
+        cp.set(sec, "export_path",               f'"{export_path}"')
+        cp.set(sec, "encryption_include_filters","\"\"")
+        cp.set(sec, "encryption_exclude_filters","\"\"")
+        cp.set(sec, "encrypt_pck",               "false")
+        cp.set(sec, "encrypt_directory",         "false")
+
+        opts_sec = f"preset.{idx}.options"
+        cp.add_section(opts_sec)
+        for k, v in options.items():
+            cp.set(opts_sec, k, str(v))
+
+        # Write without the [DEFAULT] header configparser adds
+        lines = []
+        for section in cp.sections():
+            lines.append(f"[{section}]\n\n")
+            for key, val in cp.items(section):
+                lines.append(f"{key}={val}\n")
+            lines.append("\n")
+
+        try:
+            with open(presets_path, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+            return [TextContent(type="text", text=json.dumps({
+                "success": True,
+                "data": {
+                    "preset_index": idx,
+                    "preset_name": preset_name,
+                    "platform": platform,
+                    "export_path": export_path,
+                    "note": "Preset written. Open Godot to verify and configure export templates."
+                }
+            }, indent=2))]
+        except Exception as e:
+            return [TextContent(type="text", text=json.dumps({
+                "success": False, "error": str(e)
             }, indent=2))]
 
     # ── Handle Godot process management tools (don't need Godot running) ─────

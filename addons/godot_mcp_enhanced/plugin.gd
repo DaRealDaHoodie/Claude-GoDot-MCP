@@ -54,6 +54,7 @@ func _enter_tree() -> void:
 	
 	file_operations = FileOperations.new()
 	file_operations.name = "MCPFileOperations"
+	file_operations.editor_interface = get_editor_interface()
 	add_child(file_operations)
 	
 	runtime_operations = RuntimeOperations.new()
@@ -229,6 +230,20 @@ func _setup_http_routes() -> void:
 
 	# Shader / material tools
 	http_server.register_route("/api/node/set_shader_parameter", _handle_set_shader_parameter)
+
+	# Import settings tools
+	http_server.register_route("/api/project/import_settings_get", _handle_get_import_settings)
+	http_server.register_route("/api/project/import_settings_set", _handle_set_import_settings)
+
+	# Undo / redo
+	http_server.register_route("/api/editor/undo", _handle_undo)
+	http_server.register_route("/api/editor/redo", _handle_redo)
+
+	# Navigation mesh baking
+	http_server.register_route("/api/scene/bake_navigation", _handle_bake_navigation_mesh)
+
+	# Profiler snapshot
+	http_server.register_route("/api/runtime/profiler_snapshot", _handle_get_profiler_snapshot)
 
 
 func _create_bottom_panel() -> void:
@@ -660,3 +675,59 @@ func _handle_set_shader_parameter(params: Dictionary) -> Dictionary:
 
 func _handle_scan_broken_resources(params: Dictionary) -> Dictionary:
 	return scene_operations.scan_broken_resources()
+
+
+# Import settings handlers
+func _handle_get_import_settings(params: Dictionary) -> Dictionary:
+	var resource_path = params.get("resource_path", "")
+	return file_operations.get_import_settings(resource_path)
+
+
+func _handle_set_import_settings(params: Dictionary) -> Dictionary:
+	var resource_path = params.get("resource_path", "")
+	var settings = params.get("params", {})
+	return file_operations.set_import_settings(resource_path, settings)
+
+
+# Undo / Redo handlers
+func _handle_undo(params: Dictionary) -> Dictionary:
+	var undo_redo = get_undo_redo()
+	if not undo_redo:
+		return {"success": false, "error": "EditorUndoRedoManager not available"}
+	var scene_root = get_editor_interface().get_edited_scene_root()
+	if scene_root:
+		var history_id = undo_redo.get_object_history_id(scene_root)
+		var ur = undo_redo.get_history_undo_redo(history_id)
+		if ur and ur.has_undo():
+			ur.undo()
+			return {"success": true, "data": {"message": "Undid last scene action"}}
+		else:
+			return {"success": false, "error": "Nothing to undo in scene history"}
+	return {"success": false, "error": "No scene open"}
+
+
+func _handle_redo(params: Dictionary) -> Dictionary:
+	var undo_redo = get_undo_redo()
+	if not undo_redo:
+		return {"success": false, "error": "EditorUndoRedoManager not available"}
+	var scene_root = get_editor_interface().get_edited_scene_root()
+	if scene_root:
+		var history_id = undo_redo.get_object_history_id(scene_root)
+		var ur = undo_redo.get_history_undo_redo(history_id)
+		if ur and ur.has_redo():
+			ur.redo()
+			return {"success": true, "data": {"message": "Redid last undone scene action"}}
+		else:
+			return {"success": false, "error": "Nothing to redo in scene history"}
+	return {"success": false, "error": "No scene open"}
+
+
+# Navigation mesh baking handler
+func _handle_bake_navigation_mesh(params: Dictionary) -> Dictionary:
+	return await scene_operations.bake_navigation_mesh(params)
+
+
+# Profiler snapshot handler
+func _handle_get_profiler_snapshot(params: Dictionary) -> Dictionary:
+	var frame_count = int(params.get("frame_count", 60))
+	return await runtime_operations.get_profiler_snapshot(frame_count)

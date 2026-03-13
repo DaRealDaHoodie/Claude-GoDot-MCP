@@ -2,7 +2,7 @@
 
 **The ultimate Godot MCP server for Claude — build complete games from a single prompt.**
 
-Tell Claude "build a full 2D platformer with double-jump, 3 enemy types, coins, and a main menu" and it literally does everything inside Godot — creates scenes, writes scripts, wires signals, sets up physics, configures autoloads, runs the game, simulates input to test it, and takes screenshots to verify. No copy-paste. No manual steps.
+Tell Claude "build a full 2D platformer with double-jump, 3 enemy types, coins, and a main menu" and it literally does everything inside Godot — creates scenes, writes scripts, wires signals, sets up physics, configures autoloads, runs the game, simulates input to test it, screenshots the result, and exports a build. No copy-paste. No manual steps.
 
 ---
 
@@ -10,17 +10,22 @@ Tell Claude "build a full 2D platformer with double-jump, 3 enemy types, coins, 
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude direct, real-time control over the Godot editor:
 
-- **80+ tools** covering every aspect of Godot development
-- **Scene & node operations** — create, edit, save, delete, reorder, rename
+- **85 tools** covering every aspect of Godot development
+- **Scene & node operations** — create, edit, save, delete, reorder, rename, bake navigation
 - **Script operations** — create, edit, attach GDScript files
 - **Signal wiring** — connect/disconnect signals between nodes programmatically
 - **Group management** — add/remove nodes from groups
 - **Autoload management** — add/remove global singletons
+- **Shader control** — set ShaderMaterial parameters on any node type
 - **Runtime testing** — play scenes, simulate keyboard/mouse input, inspect live nodes
+- **Profiler snapshots** — sample FPS/memory/draw calls over N frames with bottleneck detection
+- **Export pipeline** — read/create export presets, trigger headless builds (HTML5/Win/Android/etc)
+- **Import settings** — read/write .import files and trigger reimport
+- **Undo/Redo** — trigger editor undo/redo via EditorUndoRedoManager
 - **Screenshot feedback** — Claude sees the editor and running game visually
+- **Resource health** — scan all .tscn/.tres for broken res:// references
 - **Asset discovery** — Claude finds and uses all your project sprites, sounds, models
 - **Plugin detection** — Claude detects installed plugins and uses their node types
-- **Performance monitoring** — FPS, memory, draw calls in real time
 
 ---
 
@@ -131,7 +136,7 @@ Create an NPC interaction system:
 
 ---
 
-## Tool Reference (80+ tools)
+## Tool Reference (85 tools)
 
 ### Scene Operations
 | Tool | Description |
@@ -145,6 +150,7 @@ Create an NPC interaction system:
 | `add_scene` | Instantiate scene as child of a node |
 | `get_scene_tree` | Get full node tree with all properties |
 | `get_scene_file_content` | Get raw .tscn file content |
+| `bake_navigation_mesh` | Bake NavigationRegion2D/3D nav meshes (auto-finds all if no path given) |
 
 ### Node Operations
 | Tool | Description |
@@ -219,7 +225,8 @@ Create an NPC interaction system:
 | `get_node_properties` | Get runtime properties of a node |
 | `get_node_methods` | Get script methods on a node |
 | `call_node_method` | Call a method on a live node |
-| `get_runtime_stats` | FPS, memory, draw calls, physics stats |
+| `get_runtime_stats` | FPS, memory, draw calls, physics stats (single snapshot) |
+| `get_profiler_snapshot` | Sample N frames of perf metrics — returns avg/min/max + bottleneck warnings |
 | `run_test_script` | Execute test script, collect results |
 
 ### Asset & Plugin Discovery
@@ -239,9 +246,34 @@ Create an NPC interaction system:
 | `clear_output_logs` | Clear Godot output console |
 | `get_windsurf_context` | Full project context snapshot |
 | `get_live_preview` | Screenshot + scene tree + current script |
+| `undo` | Undo last action in scene's editor history |
+| `redo` | Redo last undone action in scene's editor history |
 | `check_godot_running` | Check if Godot editor is responsive |
 | `launch_godot` | Launch Godot editor |
 | `get_godot_version` | Get Godot version info |
+
+### Shader & Material
+| Tool | Description |
+|------|-------------|
+| `set_shader_parameter` | Set a uniform on a ShaderMaterial (MeshInstance3D, Sprite2D, material_override, etc.) — auto-converts arrays to Vector2/3/Color |
+
+### Import Settings
+| Tool | Description |
+|------|-------------|
+| `get_import_settings` | Read .import file for any asset — shows all [params] (compression, mipmaps, normal map, etc.) |
+| `set_import_settings` | Write new .import params and trigger reimport — e.g. change texture compression mode |
+
+### Export Pipeline
+| Tool | Description |
+|------|-------------|
+| `get_export_presets` | Read all presets from export_presets.cfg (names, platforms, output paths) |
+| `create_export_preset` | Write a new preset entry to export_presets.cfg |
+| `export_project` | Run `godot --headless --export-release` to build for a target platform |
+
+### Resource Health
+| Tool | Description |
+|------|-------------|
+| `scan_broken_resources` | Walk all .tscn/.tres files, find every `res://` reference that no longer exists on disk |
 
 ---
 

@@ -1,6 +1,8 @@
 @tool
 extends Node
 
+var editor_interface: EditorInterface
+
 signal file_system_changed()
 
 
@@ -489,5 +491,77 @@ func _parse_plugin_cfg(cfg_path: String, plugin_dir: String) -> Dictionary:
 		"script": config.get_value("plugin", "script", ""),
 		"enabled": EditorInterface.is_plugin_enabled(plugin_dir) if EditorInterface else false
 	}
-	
+
 	return plugin_info
+
+
+# ── Import Settings ──────────────────────────────────────────────────────────
+
+func get_import_settings(resource_path: String) -> Dictionary:
+	"""Read the .import file for a resource and return all sections/keys"""
+	if not resource_path.begins_with("res://"):
+		resource_path = "res://" + resource_path
+
+	var import_path = resource_path + ".import"
+	if not FileAccess.file_exists(import_path):
+		return {"success": false, "error": "No .import file for: %s (only imported assets have one)" % resource_path}
+
+	var cfg = ConfigFile.new()
+	var err = cfg.load(import_path)
+	if err != OK:
+		return {"success": false, "error": "Failed to read .import file: " + error_string(err)}
+
+	var data = {}
+	for section in cfg.get_sections():
+		data[section] = {}
+		for key in cfg.get_section_keys(section):
+			data[section][key] = cfg.get_value(section, key)
+
+	return {
+		"success": true,
+		"data": {
+			"resource_path": resource_path,
+			"import_file": import_path,
+			"settings": data,
+			"hint": "Edit keys under 'params' section, then call set_import_settings to apply."
+		}
+	}
+
+
+func set_import_settings(resource_path: String, params: Dictionary) -> Dictionary:
+	"""Write new values into the [params] section of a .import file and trigger reimport"""
+	if not resource_path.begins_with("res://"):
+		resource_path = "res://" + resource_path
+
+	var import_path = resource_path + ".import"
+	if not FileAccess.file_exists(import_path):
+		return {"success": false, "error": "No .import file for: " + resource_path}
+
+	var cfg = ConfigFile.new()
+	var err = cfg.load(import_path)
+	if err != OK:
+		return {"success": false, "error": "Failed to read .import file: " + error_string(err)}
+
+	# Apply each setting into the [params] section
+	for key in params:
+		cfg.set_value("params", key, params[key])
+
+	err = cfg.save(import_path)
+	if err != OK:
+		return {"success": false, "error": "Failed to save .import file: " + error_string(err)}
+
+	# Trigger Godot to reimport the asset
+	if editor_interface:
+		editor_interface.get_resource_filesystem().reimport_files([resource_path])
+	else:
+		push_warning("[File Operations] editor_interface not set — skipping reimport trigger")
+
+	print("[File Operations] Import settings updated and reimport triggered: ", resource_path)
+	return {
+		"success": true,
+		"data": {
+			"resource_path": resource_path,
+			"updated_params": params,
+			"message": "Reimport triggered. Asset will be re-processed by Godot."
+		}
+	}

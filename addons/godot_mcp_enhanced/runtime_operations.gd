@@ -427,6 +427,72 @@ func _scan_assets_recursive(path: String, asset_type: String, assets: Array) -> 
 		dir.list_dir_end()
 
 
+# ── Profiler Snapshot ────────────────────────────────────────────────────────
+
+func get_profiler_snapshot(frame_count: int = 60) -> Dictionary:
+	"""Sample Performance monitors over N frames and return avg/min/max statistics.
+	   Run while a scene is playing for meaningful game-specific data."""
+	frame_count = clampi(frame_count, 1, 300)
+
+	var samples: Array[Dictionary] = []
+	var start_us = Time.get_ticks_usec()
+
+	for _i in range(frame_count):
+		await Engine.get_main_loop().process_frame
+		samples.append({
+			"fps":           Engine.get_frames_per_second(),
+			"process_ms":    Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+			"physics_ms":    Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
+			"draw_calls":    Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
+			"nodes":         Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+			"objects":       Performance.get_monitor(Performance.OBJECT_COUNT),
+			"memory_mb":     Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
+			"video_mem_mb":  Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+			"2d_physics":    Performance.get_monitor(Performance.PHYSICS_2D_ACTIVE_OBJECTS),
+			"3d_physics":    Performance.get_monitor(Performance.PHYSICS_3D_ACTIVE_OBJECTS),
+		})
+
+	var elapsed_ms = (Time.get_ticks_usec() - start_us) / 1000.0
+
+	# Compute per-metric avg/min/max
+	var stats: Dictionary = {}
+	if not samples.is_empty():
+		for metric in samples[0].keys():
+			var vals = samples.map(func(s): return s[metric])
+			var total = 0.0
+			var mn: float = vals[0]
+			var mx: float = vals[0]
+			for v in vals:
+				total += v
+				if v < mn: mn = v
+				if v > mx: mx = v
+			stats[metric] = {
+				"avg": snappedf(total / vals.size(), 0.01),
+				"min": snappedf(mn, 0.01),
+				"max": snappedf(mx, 0.01),
+			}
+
+	# Bottleneck detection
+	var warnings: Array = []
+	if stats.get("fps", {}).get("avg", 60) < 30:
+		warnings.append("Low FPS (avg %.1f). Check draw_calls and 3d_physics." % stats["fps"]["avg"])
+	if stats.get("draw_calls", {}).get("max", 0) > 500:
+		warnings.append("High draw call peak (%d). Consider batching." % int(stats["draw_calls"]["max"]))
+	if stats.get("memory_mb", {}).get("max", 0) > 512:
+		warnings.append("High memory usage (%.0f MB peak)." % stats["memory_mb"]["max"])
+
+	return {
+		"success": true,
+		"data": {
+			"frames_sampled": samples.size(),
+			"elapsed_ms": snappedf(elapsed_ms, 0.1),
+			"stats": stats,
+			"warnings": warnings,
+			"note": "Run while scene is playing for game-specific metrics. process_ms + physics_ms should stay under 16ms (60fps)."
+		}
+	}
+
+
 func get_asset_info(asset_path: String) -> Dictionary:
 	"""Get detailed information about an asset"""
 	if not FileAccess.file_exists(asset_path) and not ResourceLoader.exists(asset_path):
