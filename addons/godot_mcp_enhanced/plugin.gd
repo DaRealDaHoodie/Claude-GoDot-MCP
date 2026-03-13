@@ -9,6 +9,9 @@ const DebuggerIntegration = preload("res://addons/godot_mcp_enhanced/debugger_in
 const FileOperations = preload("res://addons/godot_mcp_enhanced/file_operations.gd")
 const RuntimeOperations = preload("res://addons/godot_mcp_enhanced/runtime_operations.gd")
 const AnimationOperations = preload("res://addons/godot_mcp_enhanced/animation_operations.gd")
+const PhysicsOperations = preload("res://addons/godot_mcp_enhanced/physics_operations.gd")
+const ParticlesOperations = preload("res://addons/godot_mcp_enhanced/particles_operations.gd")
+const ShaderOperations = preload("res://addons/godot_mcp_enhanced/shader_operations.gd")
 
 var http_server: Node
 var screenshot_manager: Node
@@ -18,6 +21,9 @@ var debugger_integration: Node
 var file_operations: Node
 var runtime_operations: Node
 var animation_operations: Node
+var physics_operations: Node
+var particles_operations: Node
+var shader_operations: Node
 
 var bottom_panel: Control
 var config: Dictionary = {}
@@ -69,6 +75,21 @@ func _enter_tree() -> void:
 	animation_operations.editor_interface = get_editor_interface()
 	add_child(animation_operations)
 
+	physics_operations = PhysicsOperations.new()
+	physics_operations.name = "MCPPhysicsOperations"
+	physics_operations.editor_interface = get_editor_interface()
+	add_child(physics_operations)
+
+	particles_operations = ParticlesOperations.new()
+	particles_operations.name = "MCPParticlesOperations"
+	particles_operations.editor_interface = get_editor_interface()
+	add_child(particles_operations)
+
+	shader_operations = ShaderOperations.new()
+	shader_operations.name = "MCPShaderOperations"
+	shader_operations.editor_interface = get_editor_interface()
+	add_child(shader_operations)
+
 	# Connect HTTP server to operation handlers
 	_setup_http_routes()
 	
@@ -112,7 +133,8 @@ func _exit_tree() -> void:
 	# Clean up nodes
 	for child in [http_server, screenshot_manager, scene_operations,
 				  script_operations, debugger_integration, file_operations,
-				  runtime_operations, animation_operations]:
+				  runtime_operations, animation_operations,
+				  physics_operations, particles_operations, shader_operations]:
 		if child:
 			child.queue_free()
 	
@@ -252,6 +274,27 @@ func _setup_http_routes() -> void:
 
 	# Profiler snapshot
 	http_server.register_route("/api/runtime/profiler_snapshot", _handle_get_profiler_snapshot)
+
+	# Physics tools
+	http_server.register_route("/api/physics/apply_impulse",       _handle_apply_impulse)
+	http_server.register_route("/api/physics/apply_force",         _handle_apply_force)
+	http_server.register_route("/api/physics/apply_torque",        _handle_apply_torque)
+	http_server.register_route("/api/physics/set_linear_velocity", _handle_set_linear_velocity)
+	http_server.register_route("/api/physics/set_angular_velocity",_handle_set_angular_velocity)
+	http_server.register_route("/api/physics/set_property",        _handle_set_physics_property)
+	http_server.register_route("/api/physics/create_joint",        _handle_create_joint)
+
+	# Particle tools
+	http_server.register_route("/api/particles/create",             _handle_create_particles)
+	http_server.register_route("/api/particles/set_material_param", _handle_set_particle_material_param)
+	http_server.register_route("/api/particles/restart",            _handle_restart_particles)
+	http_server.register_route("/api/particles/info",               _handle_get_particle_info)
+
+	# Shader tools
+	http_server.register_route("/api/shader/create_material",  _handle_create_shader_material)
+	http_server.register_route("/api/shader/get_code",         _handle_get_shader_code)
+	http_server.register_route("/api/shader/set_code",         _handle_set_shader_code)
+	http_server.register_route("/api/shader/get_parameters",   _handle_get_shader_parameters)
 
 	# Animation tools
 	http_server.register_route("/api/animation/player_info",         _handle_get_animation_player_info)
@@ -824,3 +867,57 @@ func _handle_set_blend_parameter(params: Dictionary) -> Dictionary:
 
 func _handle_travel_to_state(params: Dictionary) -> Dictionary:
 	return animation_operations.travel_to_state(params)
+
+
+# ── Physics handlers ──────────────────────────────────────────────────────────
+
+func _handle_apply_impulse(params: Dictionary) -> Dictionary:
+	return physics_operations.apply_impulse(params)
+
+func _handle_apply_force(params: Dictionary) -> Dictionary:
+	return physics_operations.apply_force(params)
+
+func _handle_apply_torque(params: Dictionary) -> Dictionary:
+	return physics_operations.apply_torque(params)
+
+func _handle_set_linear_velocity(params: Dictionary) -> Dictionary:
+	return physics_operations.set_linear_velocity(params)
+
+func _handle_set_angular_velocity(params: Dictionary) -> Dictionary:
+	return physics_operations.set_angular_velocity(params)
+
+func _handle_set_physics_property(params: Dictionary) -> Dictionary:
+	return physics_operations.set_physics_property(params)
+
+func _handle_create_joint(params: Dictionary) -> Dictionary:
+	return physics_operations.create_joint(params)
+
+
+# ── Particle handlers ─────────────────────────────────────────────────────────
+
+func _handle_create_particles(params: Dictionary) -> Dictionary:
+	return particles_operations.create_particles(params)
+
+func _handle_set_particle_material_param(params: Dictionary) -> Dictionary:
+	return particles_operations.set_particle_material_param(params)
+
+func _handle_restart_particles(params: Dictionary) -> Dictionary:
+	return particles_operations.restart_particles(params)
+
+func _handle_get_particle_info(params: Dictionary) -> Dictionary:
+	return particles_operations.get_particle_info(params)
+
+
+# ── Shader handlers ───────────────────────────────────────────────────────────
+
+func _handle_create_shader_material(params: Dictionary) -> Dictionary:
+	return shader_operations.create_shader_material(params)
+
+func _handle_get_shader_code(params: Dictionary) -> Dictionary:
+	return shader_operations.get_shader_code(params)
+
+func _handle_set_shader_code(params: Dictionary) -> Dictionary:
+	return shader_operations.set_shader_code(params)
+
+func _handle_get_shader_parameters(params: Dictionary) -> Dictionary:
+	return shader_operations.get_shader_parameters(params)

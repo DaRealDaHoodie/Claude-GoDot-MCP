@@ -1349,6 +1349,245 @@ async def list_tools() -> list[Tool]:
             inputSchema={"type": "object", "properties": {}, "required": []}
         ),
 
+        # ── Physics Tools ─────────────────────────────────────────────────────
+        Tool(
+            name="apply_impulse",
+            description="Apply an instant impulse to a RigidBody3D (immediate velocity change — use for hits, explosions, jumps). Requires game to be playing for visible effect.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string",  "description": "Path to the RigidBody3D node"},
+                    "impulse":   {"type": "array",   "items": {"type": "number"}, "description": "Impulse vector [x, y, z]"},
+                    "position":  {"type": "array",   "items": {"type": "number"}, "description": "Application point relative to body center [x, y, z] (default: [0,0,0])"}
+                },
+                "required": ["node_path", "impulse"]
+            }
+        ),
+        Tool(
+            name="apply_force",
+            description="Apply a continuous force to a RigidBody3D each physics frame. For one-time hits, prefer apply_impulse.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the RigidBody3D node"},
+                    "force":     {"type": "array",  "items": {"type": "number"}, "description": "Force vector [x, y, z]"},
+                    "position":  {"type": "array",  "items": {"type": "number"}, "description": "Application point [x, y, z] (default: [0,0,0])"}
+                },
+                "required": ["node_path", "force"]
+            }
+        ),
+        Tool(
+            name="apply_torque",
+            description="Apply a rotational torque to a RigidBody3D (causes spinning). Use for doors, ragdoll limbs, barrels.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the RigidBody3D node"},
+                    "torque":    {"type": "array",  "items": {"type": "number"}, "description": "Torque vector [x, y, z]"}
+                },
+                "required": ["node_path", "torque"]
+            }
+        ),
+        Tool(
+            name="set_linear_velocity",
+            description="Directly set linear_velocity on a RigidBody3D or CharacterBody3D. Use for launching projectiles, teleporting with momentum, or resetting velocity to zero.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the physics body node"},
+                    "velocity":  {"type": "array",  "items": {"type": "number"}, "description": "Velocity vector [x, y, z]"}
+                },
+                "required": ["node_path", "velocity"]
+            }
+        ),
+        Tool(
+            name="set_angular_velocity",
+            description="Directly set angular_velocity on a RigidBody3D. Use for spinning objects, ragdoll setup.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the RigidBody3D node"},
+                    "velocity":  {"type": "array",  "items": {"type": "number"}, "description": "Angular velocity [x, y, z] in radians/sec"}
+                },
+                "required": ["node_path", "velocity"]
+            }
+        ),
+        Tool(
+            name="set_physics_property",
+            description=(
+                "Set a physics property on any physics body node. "
+                "Common properties: mass (float), gravity_scale (float), linear_damp (float), "
+                "angular_damp (float), freeze (bool), freeze_mode (string: static/kinematic), "
+                "collision_layer (int or [layer_numbers]), collision_mask (int or [layer_numbers]), "
+                "can_sleep (bool), continuous_cd (bool), max_contacts_reported (int)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the physics body node"},
+                    "property":  {"type": "string", "description": "Property name (e.g. 'mass', 'gravity_scale', 'freeze_mode')"},
+                    "value":     {"description": "New value (type depends on property)"}
+                },
+                "required": ["node_path", "property", "value"]
+            }
+        ),
+        Tool(
+            name="create_joint",
+            description=(
+                "Create a physics joint node and wire two bodies together. "
+                "Joint types: HingeJoint3D (doors, hinges), PinJoint3D (ragdoll shoulder/hip), "
+                "SliderJoint3D (pistons, elevators), Generic6DOFJoint3D (full 6-axis control), "
+                "ConeTwistJoint3D (ball socket, spine). "
+                "Set node_a_path and node_b_path to the two RigidBody3D paths to connect."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "joint_type":   {"type": "string", "description": "HingeJoint3D / PinJoint3D / SliderJoint3D / Generic6DOFJoint3D / ConeTwistJoint3D"},
+                    "parent_path":  {"type": "string", "description": "Parent node path (default: scene root)"},
+                    "joint_name":   {"type": "string", "description": "Name for the joint node"},
+                    "node_a_path":  {"type": "string", "description": "Path to first RigidBody3D"},
+                    "node_b_path":  {"type": "string", "description": "Path to second RigidBody3D"},
+                    "position":     {"type": "array",  "items": {"type": "number"}, "description": "Joint position [x, y, z]"}
+                },
+                "required": ["joint_type"]
+            }
+        ),
+
+        # ── Particle Tools ────────────────────────────────────────────────────
+        Tool(
+            name="create_particles",
+            description=(
+                "Create a GPUParticles3D node with a fully configured ParticleProcessMaterial in one call. "
+                "Supports: amount, lifetime, one_shot, explosiveness, emission_shape (point/sphere/box/ring), "
+                "emission_sphere_radius, gravity [x,y,z], initial_velocity_min/max, scale_min/max, color [r,g,b,a], "
+                "direction [x,y,z], spread (degrees), linear_accel_min/max, position [x,y,z]. "
+                "Use for muzzle flash, blood splatter, magic effects, fire, smoke, rain."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "parent_path":          {"type": "string",  "description": "Parent node path"},
+                    "particle_name":        {"type": "string",  "description": "Node name (default: GPUParticles3D)"},
+                    "amount":               {"type": "integer", "description": "Max simultaneous particles (default: 100)"},
+                    "lifetime":             {"type": "number",  "description": "Particle lifetime in seconds (default: 1.0)"},
+                    "one_shot":             {"type": "boolean", "description": "Emit once then stop (default: false)"},
+                    "explosiveness":        {"type": "number",  "description": "0=spread out, 1=all at once (default: 0)"},
+                    "emission_shape":       {"type": "string",  "description": "point / sphere / box / ring (default: point)"},
+                    "emission_sphere_radius": {"type": "number","description": "Sphere emission radius"},
+                    "emission_box_extents": {"type": "array",   "items": {"type": "number"}, "description": "Box extents [x,y,z]"},
+                    "gravity":              {"type": "array",   "items": {"type": "number"}, "description": "Gravity [x,y,z] (default: [0,-9.8,0])"},
+                    "initial_velocity_min": {"type": "number",  "description": "Min emission speed"},
+                    "initial_velocity_max": {"type": "number",  "description": "Max emission speed"},
+                    "direction":            {"type": "array",   "items": {"type": "number"}, "description": "Emission direction [x,y,z]"},
+                    "spread":               {"type": "number",  "description": "Spread angle in degrees"},
+                    "scale_min":            {"type": "number",  "description": "Min particle scale"},
+                    "scale_max":            {"type": "number",  "description": "Max particle scale"},
+                    "color":                {"type": "array",   "items": {"type": "number"}, "description": "Particle color [r,g,b,a]"},
+                    "position":             {"type": "array",   "items": {"type": "number"}, "description": "Node position [x,y,z]"},
+                    "linear_accel_min":     {"type": "number",  "description": "Min linear acceleration"},
+                    "linear_accel_max":     {"type": "number",  "description": "Max linear acceleration"}
+                }
+            }
+        ),
+        Tool(
+            name="set_particle_material_param",
+            description=(
+                "Set a specific parameter on an existing GPUParticles3D's ParticleProcessMaterial. "
+                "Common params: emission_shape (string: point/sphere/box/ring), emission_sphere_radius, "
+                "initial_velocity_min, initial_velocity_max, gravity [x,y,z], direction [x,y,z], "
+                "spread, color [r,g,b,a], scale_min, scale_max, linear_accel_min/max, "
+                "radial_accel_min/max, tangential_accel_min/max, lifetime_randomness."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":  {"type": "string", "description": "Path to the GPUParticles3D node"},
+                    "param_name": {"type": "string", "description": "ParticleProcessMaterial property name"},
+                    "value":      {"description": "New value (number, bool, or array for Vector3/Color)"}
+                },
+                "required": ["node_path", "param_name", "value"]
+            }
+        ),
+        Tool(
+            name="restart_particles",
+            description="Restart a GPUParticles3D or CPUParticles3D emission from scratch. Sets emitting=true after restart.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the particle node"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="get_particle_info",
+            description="Get all properties of a GPUParticles3D node including amount, lifetime, emission state, and ParticleProcessMaterial settings.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the GPUParticles3D node"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+
+        # ── Shader Tools ──────────────────────────────────────────────────────
+        Tool(
+            name="create_shader_material",
+            description=(
+                "Create a new ShaderMaterial with given GLSL shader code and assign it to a node's material slot. "
+                "Start code with 'shader_type spatial;' for 3D or 'shader_type canvas_item;' for 2D. "
+                "Use for damage glow, dissolve effects, hologram, outline, animated wind, water ripples."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":    {"type": "string",  "description": "Path to the node to assign the material to"},
+                    "shader_code":  {"type": "string",  "description": "Full Godot shader source code"},
+                    "surface_slot": {"type": "integer", "description": "Surface/material slot index (default: 0)"}
+                },
+                "required": ["node_path", "shader_code"]
+            }
+        ),
+        Tool(
+            name="get_shader_code",
+            description="Read the current GLSL shader source code from a node's ShaderMaterial.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":    {"type": "string",  "description": "Path to the node"},
+                    "surface_slot": {"type": "integer", "description": "Surface slot (default: 0)"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="set_shader_code",
+            description="Hot-reload the shader source code on a node's ShaderMaterial. Creates a new ShaderMaterial if none exists. Godot recompiles the shader immediately.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":    {"type": "string",  "description": "Path to the node"},
+                    "shader_code":  {"type": "string",  "description": "New shader source code"},
+                    "surface_slot": {"type": "integer", "description": "Surface slot (default: 0)"}
+                },
+                "required": ["node_path", "shader_code"]
+            }
+        ),
+        Tool(
+            name="get_shader_parameters",
+            description="List all uniforms declared in a node's ShaderMaterial shader, with current values. Use this before set_shader_parameter to see what parameters exist.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":    {"type": "string",  "description": "Path to the node"},
+                    "surface_slot": {"type": "integer", "description": "Surface slot (default: 0)"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+
         # ── Animation Tools ───────────────────────────────────────────────────
         Tool(
             name="get_animation_player_info",
@@ -1750,6 +1989,27 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
 
         # Profiler snapshot
         "get_profiler_snapshot": "/api/runtime/profiler_snapshot",
+
+        # Physics tools
+        "apply_impulse":          "/api/physics/apply_impulse",
+        "apply_force":            "/api/physics/apply_force",
+        "apply_torque":           "/api/physics/apply_torque",
+        "set_linear_velocity":    "/api/physics/set_linear_velocity",
+        "set_angular_velocity":   "/api/physics/set_angular_velocity",
+        "set_physics_property":   "/api/physics/set_property",
+        "create_joint":           "/api/physics/create_joint",
+
+        # Particle tools
+        "create_particles":            "/api/particles/create",
+        "set_particle_material_param": "/api/particles/set_material_param",
+        "restart_particles":           "/api/particles/restart",
+        "get_particle_info":           "/api/particles/info",
+
+        # Shader tools
+        "create_shader_material": "/api/shader/create_material",
+        "get_shader_code":        "/api/shader/get_code",
+        "set_shader_code":        "/api/shader/set_code",
+        "get_shader_parameters":  "/api/shader/get_parameters",
 
         # Animation tools
         "get_animation_player_info":  "/api/animation/player_info",

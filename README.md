@@ -10,7 +10,7 @@ Tell Claude "build a full 2D platformer with double-jump, 3 enemy types, coins, 
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude direct, real-time control over the Godot editor:
 
-- **105 tools** covering every aspect of Godot development
+- **120 tools** covering every aspect of Godot development
 - **Scene & node operations** — create, edit, save, delete, reorder, rename, bake navigation
 - **Script operations** — create, edit, attach GDScript files
 - **Signal wiring** — connect/disconnect signals between nodes programmatically
@@ -136,7 +136,7 @@ Create an NPC interaction system:
 
 ---
 
-## Tool Reference (105 tools)
+## Tool Reference (120 tools)
 
 ### Scene Operations
 | Tool | Description |
@@ -274,6 +274,33 @@ Create an NPC interaction system:
 | Tool | Description |
 |------|-------------|
 | `scan_broken_resources` | Walk all .tscn/.tres files, find every `res://` reference that no longer exists on disk |
+
+### Physics
+| Tool | Description |
+|------|-------------|
+| `apply_impulse` | Apply instant impulse to RigidBody3D — hits, explosions, jumps |
+| `apply_force` | Apply continuous force per physics frame — thrusters, wind |
+| `apply_torque` | Apply rotational torque to RigidBody3D — spinning barrels, ragdoll |
+| `set_linear_velocity` | Directly set linear_velocity on RigidBody3D or CharacterBody3D |
+| `set_angular_velocity` | Directly set angular_velocity on RigidBody3D |
+| `set_physics_property` | Set mass, gravity_scale, linear_damp, angular_damp, freeze, collision layers |
+| `create_joint` | Create HingeJoint3D/PinJoint3D/SliderJoint3D/Generic6DOFJoint3D/ConeTwistJoint3D wired to two bodies |
+
+### Particles
+| Tool | Description |
+|------|-------------|
+| `create_particles` | Create GPUParticles3D with full ParticleProcessMaterial config in one call |
+| `set_particle_material_param` | Set any ParticleProcessMaterial param on existing particles |
+| `restart_particles` | Restart emission on GPUParticles3D / CPUParticles3D |
+| `get_particle_info` | Get all particle properties including process material settings |
+
+### Shaders
+| Tool | Description |
+|------|-------------|
+| `create_shader_material` | Create ShaderMaterial with GLSL code and assign to a node's material slot |
+| `get_shader_code` | Read the current shader source from a node's ShaderMaterial |
+| `set_shader_code` | Hot-reload shader source — Godot recompiles immediately |
+| `get_shader_parameters` | List all uniforms in a shader with their current values |
 
 ### Animation — Library & Resource
 | Tool | Description |
