@@ -12,6 +12,9 @@ const AnimationOperations = preload("res://addons/godot_mcp_enhanced/animation_o
 const PhysicsOperations = preload("res://addons/godot_mcp_enhanced/physics_operations.gd")
 const ParticlesOperations = preload("res://addons/godot_mcp_enhanced/particles_operations.gd")
 const ShaderOperations = preload("res://addons/godot_mcp_enhanced/shader_operations.gd")
+const AudioOperations = preload("res://addons/godot_mcp_enhanced/audio_operations.gd")
+const TestingOperations = preload("res://addons/godot_mcp_enhanced/testing_operations.gd")
+const EditorPolishOperations = preload("res://addons/godot_mcp_enhanced/editor_polish_operations.gd")
 
 var http_server: Node
 var screenshot_manager: Node
@@ -24,6 +27,9 @@ var animation_operations: Node
 var physics_operations: Node
 var particles_operations: Node
 var shader_operations: Node
+var audio_operations: Node
+var testing_operations: Node
+var editor_polish_operations: Node
 
 var bottom_panel: Control
 var config: Dictionary = {}
@@ -90,6 +96,21 @@ func _enter_tree() -> void:
 	shader_operations.editor_interface = get_editor_interface()
 	add_child(shader_operations)
 
+	audio_operations = AudioOperations.new()
+	audio_operations.name = "MCPAudioOperations"
+	audio_operations.editor_interface = get_editor_interface()
+	add_child(audio_operations)
+
+	testing_operations = TestingOperations.new()
+	testing_operations.name = "MCPTestingOperations"
+	testing_operations.editor_interface = get_editor_interface()
+	add_child(testing_operations)
+
+	editor_polish_operations = EditorPolishOperations.new()
+	editor_polish_operations.name = "MCPEditorPolishOperations"
+	editor_polish_operations.editor_interface = get_editor_interface()
+	add_child(editor_polish_operations)
+
 	# Connect HTTP server to operation handlers
 	_setup_http_routes()
 	
@@ -134,7 +155,8 @@ func _exit_tree() -> void:
 	for child in [http_server, screenshot_manager, scene_operations,
 				  script_operations, debugger_integration, file_operations,
 				  runtime_operations, animation_operations,
-				  physics_operations, particles_operations, shader_operations]:
+				  physics_operations, particles_operations, shader_operations,
+				  audio_operations, testing_operations, editor_polish_operations]:
 		if child:
 			child.queue_free()
 	
@@ -274,6 +296,27 @@ func _setup_http_routes() -> void:
 
 	# Profiler snapshot
 	http_server.register_route("/api/runtime/profiler_snapshot", _handle_get_profiler_snapshot)
+
+	# Audio tools
+	http_server.register_route("/api/audio/create_3d",           _handle_create_audio_player_3d)
+	http_server.register_route("/api/audio/play",                _handle_play_audio)
+	http_server.register_route("/api/audio/stop",                _handle_stop_audio)
+	http_server.register_route("/api/audio/set_property",        _handle_set_audio_property)
+	http_server.register_route("/api/audio/playback_position",   _handle_get_playback_position)
+	http_server.register_route("/api/audio/set_bus_volume",      _handle_set_bus_volume)
+	http_server.register_route("/api/audio/add_bus_effect",      _handle_add_bus_effect)
+
+	# Testing / QA tools
+	http_server.register_route("/api/test/action_sequence",  _handle_simulate_action_sequence)
+	http_server.register_route("/api/test/wait_frames",      _handle_wait_frames)
+	http_server.register_route("/api/test/assert_property",  _handle_assert_node_property)
+	http_server.register_route("/api/test/frame_sequence",   _handle_capture_frame_sequence)
+	http_server.register_route("/api/test/scene_stats",      _handle_get_scene_statistics)
+
+	# Editor polish tools
+	http_server.register_route("/api/editor/select_nodes",       _handle_select_nodes)
+	http_server.register_route("/api/editor/batch_duplicate",    _handle_batch_duplicate_with_offset)
+	http_server.register_route("/api/editor/find_scripts",       _handle_find_scripts_with_pattern)
 
 	# Physics tools
 	http_server.register_route("/api/physics/apply_impulse",       _handle_apply_impulse)
@@ -921,3 +964,57 @@ func _handle_set_shader_code(params: Dictionary) -> Dictionary:
 
 func _handle_get_shader_parameters(params: Dictionary) -> Dictionary:
 	return shader_operations.get_shader_parameters(params)
+
+
+# ── Audio handlers ────────────────────────────────────────────────────────────
+
+func _handle_create_audio_player_3d(params: Dictionary) -> Dictionary:
+	return audio_operations.create_audio_player_3d(params)
+
+func _handle_play_audio(params: Dictionary) -> Dictionary:
+	return audio_operations.play_audio(params)
+
+func _handle_stop_audio(params: Dictionary) -> Dictionary:
+	return audio_operations.stop_audio(params)
+
+func _handle_set_audio_property(params: Dictionary) -> Dictionary:
+	return audio_operations.set_audio_property(params)
+
+func _handle_get_playback_position(params: Dictionary) -> Dictionary:
+	return audio_operations.get_playback_position(params)
+
+func _handle_set_bus_volume(params: Dictionary) -> Dictionary:
+	return audio_operations.set_bus_volume(params)
+
+func _handle_add_bus_effect(params: Dictionary) -> Dictionary:
+	return audio_operations.add_bus_effect(params)
+
+
+# ── Testing / QA handlers ─────────────────────────────────────────────────────
+
+func _handle_simulate_action_sequence(params: Dictionary) -> Dictionary:
+	return await testing_operations.simulate_action_sequence(params)
+
+func _handle_wait_frames(params: Dictionary) -> Dictionary:
+	return await testing_operations.wait_frames(params)
+
+func _handle_assert_node_property(params: Dictionary) -> Dictionary:
+	return testing_operations.assert_node_property(params)
+
+func _handle_capture_frame_sequence(params: Dictionary) -> Dictionary:
+	return await testing_operations.capture_frame_sequence(params)
+
+func _handle_get_scene_statistics(params: Dictionary) -> Dictionary:
+	return testing_operations.get_scene_statistics(params)
+
+
+# ── Editor polish handlers ────────────────────────────────────────────────────
+
+func _handle_select_nodes(params: Dictionary) -> Dictionary:
+	return editor_polish_operations.select_nodes(params)
+
+func _handle_batch_duplicate_with_offset(params: Dictionary) -> Dictionary:
+	return editor_polish_operations.batch_duplicate_with_offset(params)
+
+func _handle_find_scripts_with_pattern(params: Dictionary) -> Dictionary:
+	return editor_polish_operations.find_scripts_with_pattern(params)

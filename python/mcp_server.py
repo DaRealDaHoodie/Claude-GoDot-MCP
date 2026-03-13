@@ -1349,6 +1349,236 @@ async def list_tools() -> list[Tool]:
             inputSchema={"type": "object", "properties": {}, "required": []}
         ),
 
+        # ── Audio Tools ───────────────────────────────────────────────────────
+        Tool(
+            name="create_audio_player_3d",
+            description=(
+                "Create an AudioStreamPlayer3D node at a 3D position with a loaded audio stream. "
+                "Configures unit_size, max_distance, volume_db, pitch_scale, bus, attenuation_model "
+                "(inverse_distance/inverse_square/logarithmic/disabled), and autoplay. "
+                "Use for footsteps, gunshots, ambient sounds, or any positional 3D audio."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "parent_path":        {"type": "string",  "description": "Parent node path"},
+                    "player_name":        {"type": "string",  "description": "Node name (default: AudioStreamPlayer3D)"},
+                    "stream_path":        {"type": "string",  "description": "res:// path to the audio file (.wav, .ogg, .mp3)"},
+                    "position":           {"type": "array",   "items": {"type": "number"}, "description": "3D position [x, y, z]"},
+                    "volume_db":          {"type": "number",  "description": "Volume in decibels (default: 0.0)"},
+                    "pitch_scale":        {"type": "number",  "description": "Pitch multiplier (default: 1.0)"},
+                    "unit_size":          {"type": "number",  "description": "Reference distance for attenuation (default: 10.0)"},
+                    "max_distance":       {"type": "number",  "description": "Max audible distance (default: 0 = unlimited)"},
+                    "bus":                {"type": "string",  "description": "Target audio bus name (default: Master)"},
+                    "autoplay":           {"type": "boolean", "description": "Play on scene start"},
+                    "attenuation_model":  {"type": "string",  "description": "inverse_distance / inverse_square / logarithmic / disabled"},
+                    "play_immediately":   {"type": "boolean", "description": "Call play() right after creation (default: false)"},
+                    "max_polyphony":      {"type": "integer", "description": "Max simultaneous voices (default: 1)"}
+                }
+            }
+        ),
+        Tool(
+            name="play_audio",
+            description="Play or resume an AudioStreamPlayer (2D, 3D, or non-spatial) from an optional position in the stream.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":      {"type": "string", "description": "Path to the AudioStreamPlayer node"},
+                    "from_position":  {"type": "number", "description": "Start position in seconds (default: 0.0)"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="stop_audio",
+            description="Stop playback on an AudioStreamPlayer (2D, 3D, or non-spatial).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the AudioStreamPlayer node"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="set_audio_property",
+            description="Set a property on an AudioStreamPlayer. Common: volume_db, pitch_scale, bus, unit_size, max_distance, autoplay, stream_paused, max_polyphony, panning_strength.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the AudioStreamPlayer node"},
+                    "property":  {"type": "string", "description": "Property name"},
+                    "value":     {"description": "New property value"}
+                },
+                "required": ["node_path", "property", "value"]
+            }
+        ),
+        Tool(
+            name="get_playback_position",
+            description="Get current playback position, is_playing state, volume_db, pitch_scale, and stream path from an AudioStreamPlayer.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the AudioStreamPlayer node"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="set_bus_volume",
+            description="Set the volume_db on a named AudioServer bus (Master, Music, SFX, etc.). Use for game-wide volume control or muting.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "bus_name":  {"type": "string", "description": "Bus name (default: Master)"},
+                    "volume_db": {"type": "number", "description": "Volume in decibels (0 = unity, -80 = silent, +6 = louder)"}
+                },
+                "required": ["volume_db"]
+            }
+        ),
+        Tool(
+            name="add_bus_effect",
+            description=(
+                "Add an AudioEffect to an AudioServer bus. "
+                "Effect types: AudioEffectReverb, AudioEffectDelay, AudioEffectCompressor, "
+                "AudioEffectLimiter, AudioEffectDistortion, AudioEffectChorus, AudioEffectPitchShift, "
+                "AudioEffectAmplify, AudioEffectEQ6/EQ10/EQ21. "
+                "Additional params (e.g. room_size, dry, wet for reverb) are applied automatically."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "bus_name":    {"type": "string", "description": "Target bus name (default: Master)"},
+                    "effect_type": {"type": "string", "description": "AudioEffect class name (e.g. AudioEffectReverb)"}
+                },
+                "required": ["effect_type"]
+            }
+        ),
+
+        # ── Testing / QA Tools ─────────────────────────────────────────────────
+        Tool(
+            name="simulate_action_sequence",
+            description=(
+                "Execute a sequence of input actions/keypresses with configurable delays — "
+                "for automated playtesting. Each step: "
+                "{action: 'jump', pressed: true, delay_ms: 200} or "
+                "{keycode: 32, pressed: true, delay_ms: 100}. "
+                "Use to test walk→jump→attack combos, UI navigation, or ragdoll triggers."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "steps": {
+                        "type": "array",
+                        "description": "Array of input steps",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "action":   {"type": "string",  "description": "Input action name (from InputMap)"},
+                                "keycode":  {"type": "integer", "description": "Raw keycode (alternative to action)"},
+                                "pressed":  {"type": "boolean", "description": "True=press, False=release (default: true)"},
+                                "delay_ms": {"type": "integer", "description": "Wait this many ms AFTER firing (default: 0)"},
+                                "strength": {"type": "number",  "description": "Action strength 0–1 (default: 1.0)"}
+                            }
+                        }
+                    }
+                },
+                "required": ["steps"]
+            }
+        ),
+        Tool(
+            name="wait_frames",
+            description="Await N process frames (or physics frames) before returning. Use after physics operations to let simulation settle before asserting results.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "frame_count":    {"type": "integer", "description": "Number of frames to wait (default: 10, max: 300)"},
+                    "physics_frames": {"type": "boolean", "description": "Wait for physics frames instead of process frames (default: false)"}
+                }
+            }
+        ),
+        Tool(
+            name="assert_node_property",
+            description="Assert that a node's property matches an expected value. Returns {passed, actual, expected}. Supports numeric tolerance for floats and Vector3 distance for positions.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":      {"type": "string",  "description": "Path to the node"},
+                    "property":       {"type": "string",  "description": "Property name to check"},
+                    "expected_value": {"description": "Expected value (number, bool, string, or [x,y,z] for Vector3)"},
+                    "tolerance":      {"type": "number",  "description": "Tolerance for numeric/Vector3 comparison (default: 0.001)"}
+                },
+                "required": ["node_path", "property", "expected_value"]
+            }
+        ),
+        Tool(
+            name="capture_frame_sequence",
+            description="Capture N editor screenshots with a configurable interval between them. Returns array of base64-encoded PNGs. Use for before/after comparisons, animation verification, particle reviews.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "frame_count":   {"type": "integer", "description": "Number of screenshots to capture (default: 3, max: 10)"},
+                    "interval_ms":   {"type": "integer", "description": "Milliseconds between captures (default: 500)"},
+                    "capture_game":  {"type": "boolean", "description": "Capture game viewport instead of editor window (default: false)"}
+                }
+            }
+        ),
+        Tool(
+            name="get_scene_statistics",
+            description="Count all nodes in the current scene by type. Returns total node count, script count, max depth, and a sorted type breakdown. Use for QA audits and performance baselines.",
+            inputSchema={"type": "object", "properties": {}, "required": []}
+        ),
+
+        # ── Editor Polish Tools ────────────────────────────────────────────────
+        Tool(
+            name="select_nodes",
+            description="Select one or more nodes in the editor viewport by their scene paths. Clears existing selection by default. Useful for then inspecting or batch-editing selected nodes.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_paths":     {"type": "array",   "items": {"type": "string"}, "description": "List of node paths to select"},
+                    "clear_existing": {"type": "boolean", "description": "Clear current selection first (default: true)"}
+                },
+                "required": ["node_paths"]
+            }
+        ),
+        Tool(
+            name="batch_duplicate_with_offset",
+            description=(
+                "Duplicate a node N times, each copy offset by a cumulative position and/or rotation delta. "
+                "Perfect for placing fence posts, pillars, trees, enemy spawn points, or any repeating level geometry. "
+                "Works for both Node3D (3D offset) and Node2D (2D offset)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path":          {"type": "string",  "description": "Source node path to duplicate"},
+                    "count":              {"type": "integer", "description": "Number of duplicates to create (default: 2, max: 100)"},
+                    "position_offset":    {"type": "array",   "items": {"type": "number"}, "description": "Per-copy position delta [x, y, z] (default: [1, 0, 0])"},
+                    "rotation_offset_deg":{"type": "array",   "items": {"type": "number"}, "description": "Per-copy rotation delta in degrees [x, y, z]"},
+                    "name_prefix":        {"type": "string",  "description": "Name prefix for duplicates (default: source node name)"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="find_scripts_with_pattern",
+            description=(
+                "Grep all .gd script files in the project for a regex pattern. "
+                "Use to find: all scripts extending a class ('extends CharacterBody3D'), "
+                "all scripts calling a method ('apply_impulse'), or all usage of a node type. "
+                "Returns file paths, line numbers, and matching text (up to 5 matches per file)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "pattern":     {"type": "string",  "description": "Regex pattern to search for"},
+                    "max_results": {"type": "integer", "description": "Max matching files to return (default: 50)"}
+                },
+                "required": ["pattern"]
+            }
+        ),
+
         # ── Physics Tools ─────────────────────────────────────────────────────
         Tool(
             name="apply_impulse",
@@ -1989,6 +2219,27 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
 
         # Profiler snapshot
         "get_profiler_snapshot": "/api/runtime/profiler_snapshot",
+
+        # Audio tools
+        "create_audio_player_3d":  "/api/audio/create_3d",
+        "play_audio":              "/api/audio/play",
+        "stop_audio":              "/api/audio/stop",
+        "set_audio_property":      "/api/audio/set_property",
+        "get_playback_position":   "/api/audio/playback_position",
+        "set_bus_volume":          "/api/audio/set_bus_volume",
+        "add_bus_effect":          "/api/audio/add_bus_effect",
+
+        # Testing / QA tools
+        "simulate_action_sequence": "/api/test/action_sequence",
+        "wait_frames":              "/api/test/wait_frames",
+        "assert_node_property":     "/api/test/assert_property",
+        "capture_frame_sequence":   "/api/test/frame_sequence",
+        "get_scene_statistics":     "/api/test/scene_stats",
+
+        # Editor polish tools
+        "select_nodes":                "/api/editor/select_nodes",
+        "batch_duplicate_with_offset": "/api/editor/batch_duplicate",
+        "find_scripts_with_pattern":   "/api/editor/find_scripts",
 
         # Physics tools
         "apply_impulse":          "/api/physics/apply_impulse",

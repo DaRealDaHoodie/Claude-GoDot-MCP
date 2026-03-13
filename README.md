@@ -10,7 +10,7 @@ Tell Claude "build a full 2D platformer with double-jump, 3 enemy types, coins, 
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude direct, real-time control over the Godot editor:
 
-- **120 tools** covering every aspect of Godot development
+- **135 tools** covering every aspect of Godot development
 - **Scene & node operations** — create, edit, save, delete, reorder, rename, bake navigation
 - **Script operations** — create, edit, attach GDScript files
 - **Signal wiring** — connect/disconnect signals between nodes programmatically
@@ -136,7 +136,7 @@ Create an NPC interaction system:
 
 ---
 
-## Tool Reference (120 tools)
+## Tool Reference (135 tools)
 
 ### Scene Operations
 | Tool | Description |
@@ -274,6 +274,33 @@ Create an NPC interaction system:
 | Tool | Description |
 |------|-------------|
 | `scan_broken_resources` | Walk all .tscn/.tres files, find every `res://` reference that no longer exists on disk |
+
+### Audio
+| Tool | Description |
+|------|-------------|
+| `create_audio_player_3d` | Create AudioStreamPlayer3D with stream, 3D position, attenuation, bus config |
+| `play_audio` | Play/resume any AudioStreamPlayer (2D/3D/non-spatial), optionally from position |
+| `stop_audio` | Stop playback on any AudioStreamPlayer |
+| `set_audio_property` | Set volume_db, pitch_scale, bus, unit_size, max_distance, autoplay, etc. |
+| `get_playback_position` | Get current playback position, is_playing, volume, bus from a player |
+| `set_bus_volume` | Set volume_db on any AudioServer bus (Master, Music, SFX, etc.) |
+| `add_bus_effect` | Add AudioEffect to a bus (Reverb, Delay, Compressor, Limiter, Distortion, Chorus, PitchShift, EQ) |
+
+### Testing / QA
+| Tool | Description |
+|------|-------------|
+| `simulate_action_sequence` | Fire a sequence of input actions/keypresses with configurable delays between steps |
+| `wait_frames` | Await N process or physics frames — let simulation settle before asserting |
+| `assert_node_property` | Assert a node property equals expected value; returns {passed, actual, expected} |
+| `capture_frame_sequence` | Capture N screenshots with interval — for before/after comparisons |
+| `get_scene_statistics` | Node type breakdown, script count, max depth, total node count |
+
+### Editor Polish
+| Tool | Description |
+|------|-------------|
+| `select_nodes` | Select nodes in editor viewport by path list |
+| `batch_duplicate_with_offset` | Duplicate a node N times with cumulative position/rotation delta |
+| `find_scripts_with_pattern` | Grep all .gd files for a regex pattern — find class usages, method calls, etc. |
 
 ### Physics
 | Tool | Description |
