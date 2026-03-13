@@ -195,6 +195,7 @@ func _setup_http_routes() -> void:
 	http_server.register_route("/api/project/autoload_add", _handle_add_autoload)
 	http_server.register_route("/api/project/autoload_remove", _handle_remove_autoload)
 	http_server.register_route("/api/project/set_main_scene", _handle_set_main_scene)
+	http_server.register_route("/api/project/scan_broken_resources", _handle_scan_broken_resources)
 
 	# New scene/node tools
 	http_server.register_route("/api/scene/save", _handle_save_scene)
@@ -225,6 +226,9 @@ func _setup_http_routes() -> void:
 	http_server.register_route("/api/runtime/run_test", _handle_run_test_script)
 	http_server.register_route("/api/runtime/assets_by_type", _handle_get_assets_by_type)
 	http_server.register_route("/api/runtime/asset_info", _handle_get_asset_info)
+
+	# Shader / material tools
+	http_server.register_route("/api/node/set_shader_parameter", _handle_set_shader_parameter)
 
 
 func _create_bottom_panel() -> void:
@@ -648,3 +652,11 @@ func _handle_get_assets_by_type(params: Dictionary) -> Dictionary:
 func _handle_get_asset_info(params: Dictionary) -> Dictionary:
 	var asset_path = params.get("asset_path", "")
 	return runtime_operations.get_asset_info(asset_path)
+
+
+func _handle_set_shader_parameter(params: Dictionary) -> Dictionary:
+	return scene_operations.set_shader_parameter(params)
+
+
+func _handle_scan_broken_resources(params: Dictionary) -> Dictionary:
+	return scene_operations.scan_broken_resources()

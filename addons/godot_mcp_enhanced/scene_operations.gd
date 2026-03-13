@@ -798,3 +798,126 @@ func get_class_property_list(params: Dictionary) -> Dictionary:
 			"count": props.size()
 		}
 	}
+
+
+func set_shader_parameter(params: Dictionary) -> Dictionary:
+	"""Set a parameter on a ShaderMaterial attached to a node"""
+	var node_path = params.get("node_path", "")
+	var param_name = params.get("param_name", "")
+	var value = params.get("value")
+	var surface_index = params.get("surface_index", 0)
+
+	var root = editor_interface.get_edited_scene_root()
+	if not root:
+		return {"success": false, "error": "No scene currently open"}
+
+	var node = root.get_node_or_null(node_path)
+	if not node:
+		return {"success": false, "error": "Node not found: " + node_path}
+
+	# Resolve the material from the node using multiple strategies
+	var material: Material = null
+
+	# MeshInstance3D / CSGShape3D — surface override first, then mesh material
+	if node.has_method("get_surface_override_material"):
+		material = node.get_surface_override_material(surface_index)
+	if not material and node.has_method("get_active_mesh") and node.get_active_mesh():
+		material = node.get_active_mesh().surface_get_material(surface_index)
+
+	# Node3D material_override (works on any VisualInstance3D)
+	if not material and "material_override" in node and node.material_override:
+		material = node.material_override
+
+	# 2D / CanvasItem: material property
+	if not material and "material" in node and node.material:
+		material = node.material
+
+	if not material:
+		return {"success": false, "error": "No material found on node '%s'. Set a ShaderMaterial first." % node_path}
+
+	if not material is ShaderMaterial:
+		return {"success": false, "error": "Material is %s, not ShaderMaterial. Convert it first." % material.get_class()}
+
+	# Convert array values to Godot vector/color types automatically
+	var typed_value = _coerce_shader_value(value)
+	material.set_shader_parameter(param_name, typed_value)
+
+	emit_signal("scene_modified", "")
+	print("[Scene Operations] Shader param set: %s.%s = %s" % [node_path, param_name, str(typed_value)])
+	return {"success": true, "data": {"node_path": node_path, "param": param_name, "value": str(typed_value)}}
+
+
+func _coerce_shader_value(value) -> Variant:
+	"""Convert JSON array values to Godot vector/color types for shader params"""
+	if not value is Array:
+		return value
+	match value.size():
+		2: return Vector2(value[0], value[1])
+		3: return Vector3(value[0], value[1], value[2])
+		4: return Color(value[0], value[1], value[2], value[3])
+		_: return value
+
+
+func scan_broken_resources() -> Dictionary:
+	"""Scan all .tscn/.tres/.res files for broken res:// references"""
+	var broken = []
+	_scan_for_broken_refs("res://", broken)
+
+	# Deduplicate by (file, missing_ref) pair
+	var seen = {}
+	var unique_broken = []
+	for entry in broken:
+		var key = entry["file"] + "|" + entry["missing_ref"]
+		if not seen.has(key):
+			seen[key] = true
+			unique_broken.append(entry)
+
+	return {
+		"success": true,
+		"data": {
+			"broken_count": unique_broken.size(),
+			"broken_refs": unique_broken,
+			"message": "Run after moving/renaming assets. Fix by updating references or re-importing."
+		}
+	}
+
+
+func _scan_for_broken_refs(path: String, broken: Array) -> void:
+	var dir = DirAccess.open(path)
+	if not dir:
+		return
+	dir.list_dir_begin()
+	var item = dir.get_next()
+	while item != "":
+		if not item.begins_with("."):
+			var full = path.path_join(item)
+			if dir.current_is_dir():
+				_scan_for_broken_refs(full, broken)
+			else:
+				var ext = item.get_extension().to_lower()
+				if ext in ["tscn", "tres", "res"]:
+					_check_file_for_broken_refs(full, broken)
+		item = dir.get_next()
+	dir.list_dir_end()
+
+
+func _check_file_for_broken_refs(file_path: String, broken: Array) -> void:
+	var file = FileAccess.open(file_path, FileAccess.READ)
+	if not file:
+		return
+	var content = file.get_as_text()
+	file.close()
+
+	var regex = RegEx.new()
+	# Match res:// paths (stop at quote, whitespace, comma, closing paren/bracket)
+	regex.compile('res://[^"\\s,)\\]]+')
+	var matches = regex.search_all(content)
+
+	for m in matches:
+		var ref_path = m.get_string()
+		# Skip metadata files — they're generated and may not exist as standalone files
+		if ref_path.ends_with(".import") or ref_path.ends_with(".uid"):
+			continue
+		# Check if the referenced file exists
+		if not FileAccess.file_exists(ref_path):
+			broken.append({"file": file_path, "missing_ref": ref_path})

@@ -1080,6 +1080,129 @@ async def list_tools() -> list[Tool]:
                 "required": ["scene_path"]
             }
         ),
+
+        # ── Previously wired but missing Tool() definitions ───────────────────
+        Tool(
+            name="get_node_methods",
+            description="Get all script-defined methods on a node. Useful before calling call_node_method.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Path to the node"}
+                },
+                "required": ["node_path"]
+            }
+        ),
+        Tool(
+            name="simulate_mouse_button",
+            description="Simulate a mouse button press or release at a screen position while the game is running",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "button_index": {"type": "integer", "description": "Mouse button: 1=left, 2=right, 3=middle"},
+                    "pressed": {"type": "boolean", "description": "True to press, false to release", "default": True},
+                    "position_x": {"type": "number", "description": "X screen coordinate"},
+                    "position_y": {"type": "number", "description": "Y screen coordinate"}
+                },
+                "required": ["button_index"]
+            }
+        ),
+        Tool(
+            name="simulate_mouse_motion",
+            description="Simulate mouse movement to a screen position while the game is running",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "position_x": {"type": "number", "description": "Target X screen coordinate"},
+                    "position_y": {"type": "number", "description": "Target Y screen coordinate"},
+                    "relative_x": {"type": "number", "description": "Relative X movement delta", "default": 0},
+                    "relative_y": {"type": "number", "description": "Relative Y movement delta", "default": 0}
+                },
+                "required": ["position_x", "position_y"]
+            }
+        ),
+
+        # ── Export Tools ──────────────────────────────────────────────────────
+        Tool(
+            name="get_export_presets",
+            description=(
+                "Read all export presets from export_presets.cfg. "
+                "Returns preset names, platforms, output paths, and options. "
+                "You must have at least one preset configured in Godot (Project → Export) before calling export_project."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_path": {
+                        "type": "string",
+                        "description": "Absolute path to the Godot project folder. Defaults to current working directory."
+                    }
+                },
+                "required": []
+            }
+        ),
+        Tool(
+            name="export_project",
+            description=(
+                "Export the Godot project for a target platform using a named export preset. "
+                "Requires GODOT_EXECUTABLE env var and an existing export preset (see get_export_presets). "
+                "Runs: godot --headless --export-release '<preset_name>' '<output_path>'"
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "preset_name": {
+                        "type": "string",
+                        "description": "Exact preset name from export_presets.cfg (e.g. 'Windows Desktop', 'HTML5', 'Android')"
+                    },
+                    "output_path": {
+                        "type": "string",
+                        "description": "Output file path (e.g. '/tmp/game.exe', '/tmp/game.html', '/tmp/game.apk')"
+                    },
+                    "project_path": {
+                        "type": "string",
+                        "description": "Absolute path to Godot project folder. Defaults to current working directory."
+                    },
+                    "debug": {
+                        "type": "boolean",
+                        "description": "Export a debug build (--export-debug) instead of release. Default: false.",
+                        "default": False
+                    }
+                },
+                "required": ["preset_name", "output_path"]
+            }
+        ),
+
+        # ── Shader / Material Tools ───────────────────────────────────────────
+        Tool(
+            name="set_shader_parameter",
+            description=(
+                "Set a parameter on a ShaderMaterial attached to a node. "
+                "Works with MeshInstance3D, Sprite2D, CanvasItem material_override, etc. "
+                "The material must already be a ShaderMaterial (not StandardMaterial3D)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "node_path": {"type": "string", "description": "Scene-tree path to the node (e.g. 'MeshInstance3D' or 'Player/Body')"},
+                    "param_name": {"type": "string", "description": "Shader uniform name as declared in the .gdshader file"},
+                    "value": {"description": "Value to set. For vec2/vec3/vec4 use arrays [x,y,z,w]. For colors use [r,g,b,a]."},
+                    "surface_index": {"type": "integer", "description": "For MeshInstance3D: which surface's material (default 0)", "default": 0}
+                },
+                "required": ["node_path", "param_name", "value"]
+            }
+        ),
+
+        # ── Resource Health Tools ─────────────────────────────────────────────
+        Tool(
+            name="scan_broken_resources",
+            description=(
+                "Scan the entire project for broken resource references — "
+                "res:// paths mentioned in .tscn/.tres/.res files that no longer exist on disk. "
+                "Returns a list of {file, missing_ref} pairs. Run after moving/renaming files."
+            ),
+            inputSchema={"type": "object", "properties": {}, "required": []}
+        ),
     ]
 
 
@@ -1169,9 +1292,120 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
         "add_autoload": "/api/project/autoload_add",
         "remove_autoload": "/api/project/autoload_remove",
         "set_main_scene": "/api/project/set_main_scene",
+
+        # Shader / material tools
+        "set_shader_parameter": "/api/node/set_shader_parameter",
+
+        # Resource health tools
+        "scan_broken_resources": "/api/project/scan_broken_resources",
     }
     
-    # Handle Godot process management tools (don't need Godot running)
+    # ── Export tools (Python subprocess, no Godot HTTP needed) ───────────────
+
+    if name == "get_export_presets":
+        import configparser
+        project_path = arguments.get("project_path", os.getcwd())
+        presets_path = os.path.join(project_path, "export_presets.cfg")
+
+        if not os.path.exists(presets_path):
+            return [TextContent(type="text", text=json.dumps({
+                "success": True,
+                "presets": [],
+                "message": "No export_presets.cfg found. Create presets via Godot: Project → Export → Add preset."
+            }, indent=2))]
+
+        try:
+            with open(presets_path, "r", encoding="utf-8") as f:
+                raw = f.read()
+
+            # Godot cfg files use sections like [preset.0] and [preset.0.options]
+            # Standard configparser handles this fine
+            cp = configparser.RawConfigParser()
+            cp.read_string(raw)
+
+            presets = []
+            idx = 0
+            while cp.has_section(f"preset.{idx}"):
+                sec = f"preset.{idx}"
+                opts_sec = f"preset.{idx}.options"
+                preset = {
+                    "index": idx,
+                    "name": cp.get(sec, "name", fallback="").strip('"'),
+                    "platform": cp.get(sec, "platform", fallback="").strip('"'),
+                    "runnable": cp.get(sec, "runnable", fallback="false") == "true",
+                    "export_path": cp.get(sec, "export_path", fallback="").strip('"'),
+                    "options": {}
+                }
+                if cp.has_section(opts_sec):
+                    for key, val in cp.items(opts_sec):
+                        preset["options"][key] = val.strip('"')
+                presets.append(preset)
+                idx += 1
+
+            return [TextContent(type="text", text=json.dumps({
+                "success": True,
+                "count": len(presets),
+                "presets": presets
+            }, indent=2))]
+
+        except Exception as e:
+            return [TextContent(type="text", text=json.dumps({
+                "success": False,
+                "error": f"Failed to parse export_presets.cfg: {e}"
+            }, indent=2))]
+
+    if name == "export_project":
+        import subprocess
+        godot_exe = os.getenv("GODOT_EXECUTABLE")
+        if not godot_exe:
+            return [TextContent(type="text", text=json.dumps({
+                "success": False,
+                "error": "GODOT_EXECUTABLE environment variable not set. Required for headless export."
+            }, indent=2))]
+
+        preset_name = arguments.get("preset_name", "")
+        output_path = arguments.get("output_path", "")
+        project_path = arguments.get("project_path", os.getcwd())
+        debug = arguments.get("debug", False)
+
+        if not preset_name or not output_path:
+            return [TextContent(type="text", text=json.dumps({
+                "success": False,
+                "error": "preset_name and output_path are required"
+            }, indent=2))]
+
+        export_flag = "--export-debug" if debug else "--export-release"
+        cmd = [godot_exe, "--headless", "--path", project_path, export_flag, preset_name, output_path]
+
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            success = proc.returncode == 0
+            return [TextContent(type="text", text=json.dumps({
+                "success": success,
+                "returncode": proc.returncode,
+                "stdout": proc.stdout[-4000:] if proc.stdout else "",
+                "stderr": proc.stderr[-4000:] if proc.stderr else "",
+                "command": " ".join(cmd),
+                "note": "Check stderr for Godot export errors. returncode=0 means success."
+            }, indent=2))]
+
+        except subprocess.TimeoutExpired:
+            return [TextContent(type="text", text=json.dumps({
+                "success": False,
+                "error": "Export timed out after 5 minutes"
+            }, indent=2))]
+        except Exception as e:
+            return [TextContent(type="text", text=json.dumps({
+                "success": False,
+                "error": str(e)
+            }, indent=2))]
+
+    # ── Handle Godot process management tools (don't need Godot running) ─────
     if name == "check_godot_running":
         try:
             async with httpx.AsyncClient(timeout=2.0) as client:
