@@ -8,6 +8,7 @@ const ScriptOperations = preload("res://addons/godot_mcp_enhanced/script_operati
 const DebuggerIntegration = preload("res://addons/godot_mcp_enhanced/debugger_integration.gd")
 const FileOperations = preload("res://addons/godot_mcp_enhanced/file_operations.gd")
 const RuntimeOperations = preload("res://addons/godot_mcp_enhanced/runtime_operations.gd")
+const AnimationOperations = preload("res://addons/godot_mcp_enhanced/animation_operations.gd")
 
 var http_server: Node
 var screenshot_manager: Node
@@ -16,6 +17,7 @@ var script_operations: Node
 var debugger_integration: Node
 var file_operations: Node
 var runtime_operations: Node
+var animation_operations: Node
 
 var bottom_panel: Control
 var config: Dictionary = {}
@@ -61,7 +63,12 @@ func _enter_tree() -> void:
 	runtime_operations.name = "MCPRuntimeOperations"
 	runtime_operations.editor_interface = get_editor_interface()
 	add_child(runtime_operations)
-	
+
+	animation_operations = AnimationOperations.new()
+	animation_operations.name = "MCPAnimationOperations"
+	animation_operations.editor_interface = get_editor_interface()
+	add_child(animation_operations)
+
 	# Connect HTTP server to operation handlers
 	_setup_http_routes()
 	
@@ -103,8 +110,9 @@ func _exit_tree() -> void:
 		bottom_panel.queue_free()
 	
 	# Clean up nodes
-	for child in [http_server, screenshot_manager, scene_operations, 
-				  script_operations, debugger_integration, file_operations, runtime_operations]:
+	for child in [http_server, screenshot_manager, scene_operations,
+				  script_operations, debugger_integration, file_operations,
+				  runtime_operations, animation_operations]:
 		if child:
 			child.queue_free()
 	
@@ -244,6 +252,28 @@ func _setup_http_routes() -> void:
 
 	# Profiler snapshot
 	http_server.register_route("/api/runtime/profiler_snapshot", _handle_get_profiler_snapshot)
+
+	# Animation tools
+	http_server.register_route("/api/animation/player_info",         _handle_get_animation_player_info)
+	http_server.register_route("/api/animation/create",              _handle_create_animation)
+	http_server.register_route("/api/animation/info",                _handle_get_animation_info)
+	http_server.register_route("/api/animation/set_properties",      _handle_set_animation_properties)
+	http_server.register_route("/api/animation/delete",              _handle_delete_animation)
+	http_server.register_route("/api/animation/track/add",           _handle_add_animation_track)
+	http_server.register_route("/api/animation/track/remove",        _handle_remove_animation_track)
+	http_server.register_route("/api/animation/track/set_path",      _handle_set_track_path)
+	http_server.register_route("/api/animation/track/info",          _handle_get_track_info)
+	http_server.register_route("/api/animation/track/set_interp",    _handle_set_track_interpolation)
+	http_server.register_route("/api/animation/keyframe/add",        _handle_add_keyframe)
+	http_server.register_route("/api/animation/keyframe/remove",     _handle_remove_keyframe)
+	http_server.register_route("/api/animation/keyframe/set_value",  _handle_set_keyframe_value)
+	http_server.register_route("/api/animation/keyframe/set_time",   _handle_set_keyframe_time)
+	http_server.register_route("/api/animation/keyframe/list",       _handle_get_keyframes)
+	http_server.register_route("/api/animation/tree/setup",          _handle_setup_animation_tree)
+	http_server.register_route("/api/animation/tree/add_state",      _handle_add_state_to_machine)
+	http_server.register_route("/api/animation/tree/connect_states", _handle_connect_states)
+	http_server.register_route("/api/animation/tree/set_blend",      _handle_set_blend_parameter)
+	http_server.register_route("/api/animation/tree/travel",         _handle_travel_to_state)
 
 
 func _create_bottom_panel() -> void:
@@ -731,3 +761,66 @@ func _handle_bake_navigation_mesh(params: Dictionary) -> Dictionary:
 func _handle_get_profiler_snapshot(params: Dictionary) -> Dictionary:
 	var frame_count = int(params.get("frame_count", 60))
 	return await runtime_operations.get_profiler_snapshot(frame_count)
+
+
+# ── Animation handlers ────────────────────────────────────────────────────────
+
+func _handle_get_animation_player_info(params: Dictionary) -> Dictionary:
+	return animation_operations.get_animation_player_info(params)
+
+func _handle_create_animation(params: Dictionary) -> Dictionary:
+	return animation_operations.create_animation(params)
+
+func _handle_get_animation_info(params: Dictionary) -> Dictionary:
+	return animation_operations.get_animation_info(params)
+
+func _handle_set_animation_properties(params: Dictionary) -> Dictionary:
+	return animation_operations.set_animation_properties(params)
+
+func _handle_delete_animation(params: Dictionary) -> Dictionary:
+	return animation_operations.delete_animation(params)
+
+func _handle_add_animation_track(params: Dictionary) -> Dictionary:
+	return animation_operations.add_animation_track(params)
+
+func _handle_remove_animation_track(params: Dictionary) -> Dictionary:
+	return animation_operations.remove_animation_track(params)
+
+func _handle_set_track_path(params: Dictionary) -> Dictionary:
+	return animation_operations.set_track_path(params)
+
+func _handle_get_track_info(params: Dictionary) -> Dictionary:
+	return animation_operations.get_track_info(params)
+
+func _handle_set_track_interpolation(params: Dictionary) -> Dictionary:
+	return animation_operations.set_track_interpolation(params)
+
+func _handle_add_keyframe(params: Dictionary) -> Dictionary:
+	return animation_operations.add_keyframe(params)
+
+func _handle_remove_keyframe(params: Dictionary) -> Dictionary:
+	return animation_operations.remove_keyframe(params)
+
+func _handle_set_keyframe_value(params: Dictionary) -> Dictionary:
+	return animation_operations.set_keyframe_value(params)
+
+func _handle_set_keyframe_time(params: Dictionary) -> Dictionary:
+	return animation_operations.set_keyframe_time(params)
+
+func _handle_get_keyframes(params: Dictionary) -> Dictionary:
+	return animation_operations.get_keyframes(params)
+
+func _handle_setup_animation_tree(params: Dictionary) -> Dictionary:
+	return animation_operations.setup_animation_tree(params)
+
+func _handle_add_state_to_machine(params: Dictionary) -> Dictionary:
+	return animation_operations.add_state_to_machine(params)
+
+func _handle_connect_states(params: Dictionary) -> Dictionary:
+	return animation_operations.connect_states(params)
+
+func _handle_set_blend_parameter(params: Dictionary) -> Dictionary:
+	return animation_operations.set_blend_parameter(params)
+
+func _handle_travel_to_state(params: Dictionary) -> Dictionary:
+	return animation_operations.travel_to_state(params)

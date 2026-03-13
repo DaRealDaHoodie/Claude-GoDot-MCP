@@ -1348,6 +1348,299 @@ async def list_tools() -> list[Tool]:
             ),
             inputSchema={"type": "object", "properties": {}, "required": []}
         ),
+
+        # ── Animation Tools ───────────────────────────────────────────────────
+        Tool(
+            name="get_animation_player_info",
+            description="List all animation libraries and animations in an AnimationPlayer node. Returns current animation, play state, and all library/animation names with length and track counts.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path": {"type": "string", "description": "Path to AnimationPlayer node (default: 'AnimationPlayer')"}
+                }
+            }
+        ),
+        Tool(
+            name="create_animation",
+            description="Create a new Animation resource and add it to an AnimationPlayer's library. Specify length, loop mode (none/linear/pingpong), and step.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":      {"type": "string",  "description": "Path to AnimationPlayer"},
+                    "animation_name":   {"type": "string",  "description": "Name for the new animation"},
+                    "library_name":     {"type": "string",  "description": "Library to add to (default: '' = default library)"},
+                    "length":           {"type": "number",  "description": "Animation length in seconds (default: 1.0)"},
+                    "loop_mode":        {"type": "string",  "description": "Loop mode: none / linear / pingpong (default: none)"},
+                    "step":             {"type": "number",  "description": "Step size (default: 0.1)"}
+                },
+                "required": ["animation_name"]
+            }
+        ),
+        Tool(
+            name="get_animation_info",
+            description="Get detailed info about an animation: length, loop mode, step, and a list of all tracks with type, path, and keyframe count.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string", "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string", "description": "Animation name"},
+                    "library_name":   {"type": "string", "description": "Library name (optional)"}
+                },
+                "required": ["animation_name"]
+            }
+        ),
+        Tool(
+            name="set_animation_properties",
+            description="Set length, loop_mode, and/or step on an existing Animation.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string", "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string", "description": "Animation name"},
+                    "library_name":   {"type": "string", "description": "Library name (optional)"},
+                    "length":         {"type": "number", "description": "New length in seconds"},
+                    "loop_mode":      {"type": "string", "description": "none / linear / pingpong"},
+                    "step":           {"type": "number", "description": "New step size"}
+                },
+                "required": ["animation_name"]
+            }
+        ),
+        Tool(
+            name="delete_animation",
+            description="Remove an animation from an AnimationPlayer's library.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string", "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string", "description": "Animation name to delete"},
+                    "library_name":   {"type": "string", "description": "Library name (required if not default library)"}
+                },
+                "required": ["animation_name"]
+            }
+        ),
+        Tool(
+            name="add_animation_track",
+            description="Add a new track to an Animation. Track types: value, position_3d, rotation_3d, scale_3d, blend_shape, method, bezier, audio, animation. Returns the new track index.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string", "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string", "description": "Animation name"},
+                    "library_name":   {"type": "string", "description": "Library name (optional)"},
+                    "track_type":     {"type": "string", "description": "Track type: value/position_3d/rotation_3d/scale_3d/blend_shape/method/bezier/audio/animation"},
+                    "track_path":     {"type": "string", "description": "NodePath:property for this track, e.g. 'Skeleton3D:position' or 'MeshInstance3D:blend_shapes/Smile'"},
+                    "interpolation":  {"type": "string", "description": "nearest/linear/cubic/linear_angle/cubic_angle (default: linear)"}
+                },
+                "required": ["animation_name", "track_type", "track_path"]
+            }
+        ),
+        Tool(
+            name="remove_animation_track",
+            description="Remove a track by index from an Animation.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string",  "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string",  "description": "Animation name"},
+                    "library_name":   {"type": "string",  "description": "Library name (optional)"},
+                    "track_index":    {"type": "integer", "description": "Track index to remove"}
+                },
+                "required": ["animation_name", "track_index"]
+            }
+        ),
+        Tool(
+            name="set_track_path",
+            description="Change the NodePath:property target of an existing animation track.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string",  "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string",  "description": "Animation name"},
+                    "library_name":   {"type": "string",  "description": "Library name (optional)"},
+                    "track_index":    {"type": "integer", "description": "Track index"},
+                    "track_path":     {"type": "string",  "description": "New NodePath:property"}
+                },
+                "required": ["animation_name", "track_index", "track_path"]
+            }
+        ),
+        Tool(
+            name="get_track_info",
+            description="Get full info about a specific animation track: type, path, interpolation mode, and all keyframes with time/value/transition.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string",  "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string",  "description": "Animation name"},
+                    "library_name":   {"type": "string",  "description": "Library name (optional)"},
+                    "track_index":    {"type": "integer", "description": "Track index"}
+                },
+                "required": ["animation_name", "track_index"]
+            }
+        ),
+        Tool(
+            name="set_track_interpolation",
+            description="Set the interpolation mode on an animation track. Modes: nearest, linear, cubic, linear_angle, cubic_angle.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string",  "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string",  "description": "Animation name"},
+                    "library_name":   {"type": "string",  "description": "Library name (optional)"},
+                    "track_index":    {"type": "integer", "description": "Track index"},
+                    "interpolation":  {"type": "string",  "description": "nearest/linear/cubic/linear_angle/cubic_angle"}
+                },
+                "required": ["animation_name", "track_index", "interpolation"]
+            }
+        ),
+        Tool(
+            name="add_keyframe",
+            description="Insert a keyframe at a given time on an animation track. For 3D tracks pass value as [x,y,z] (position/scale) or [x,y,z,w] (rotation quaternion). Returns the new key index.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string",  "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string",  "description": "Animation name"},
+                    "library_name":   {"type": "string",  "description": "Library name (optional)"},
+                    "track_index":    {"type": "integer", "description": "Track index"},
+                    "time":           {"type": "number",  "description": "Time in seconds"},
+                    "value":          {"description": "Keyframe value (number, bool, string, or [x,y,z] / [x,y,z,w] array for 3D tracks)"},
+                    "transition":     {"type": "number",  "description": "Easing transition (default: 1.0)"}
+                },
+                "required": ["animation_name", "track_index", "time", "value"]
+            }
+        ),
+        Tool(
+            name="remove_keyframe",
+            description="Remove a keyframe from an animation track. Specify by key_index, or by time (removes nearest key).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string",  "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string",  "description": "Animation name"},
+                    "library_name":   {"type": "string",  "description": "Library name (optional)"},
+                    "track_index":    {"type": "integer", "description": "Track index"},
+                    "key_index":      {"type": "integer", "description": "Key index to remove (use this OR time)"},
+                    "time":           {"type": "number",  "description": "Remove nearest key at this time (use this OR key_index)"}
+                },
+                "required": ["animation_name", "track_index"]
+            }
+        ),
+        Tool(
+            name="set_keyframe_value",
+            description="Update the value of an existing keyframe on an animation track. Arrays are auto-coerced to Vector3/Quaternion based on track type.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string",  "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string",  "description": "Animation name"},
+                    "library_name":   {"type": "string",  "description": "Library name (optional)"},
+                    "track_index":    {"type": "integer", "description": "Track index"},
+                    "key_index":      {"type": "integer", "description": "Key index"},
+                    "value":          {"description": "New keyframe value"}
+                },
+                "required": ["animation_name", "track_index", "key_index", "value"]
+            }
+        ),
+        Tool(
+            name="set_keyframe_time",
+            description="Move an existing keyframe to a new time position on an animation track.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string",  "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string",  "description": "Animation name"},
+                    "library_name":   {"type": "string",  "description": "Library name (optional)"},
+                    "track_index":    {"type": "integer", "description": "Track index"},
+                    "key_index":      {"type": "integer", "description": "Key index"},
+                    "time":           {"type": "number",  "description": "New time in seconds"}
+                },
+                "required": ["animation_name", "track_index", "key_index", "time"]
+            }
+        ),
+        Tool(
+            name="get_keyframes",
+            description="List all keyframes on an animation track with time, value, and transition. Values are returned as JSON-safe arrays for Vector/Quaternion types.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":    {"type": "string",  "description": "Path to AnimationPlayer"},
+                    "animation_name": {"type": "string",  "description": "Animation name"},
+                    "library_name":   {"type": "string",  "description": "Library name (optional)"},
+                    "track_index":    {"type": "integer", "description": "Track index"}
+                },
+                "required": ["animation_name", "track_index"]
+            }
+        ),
+        Tool(
+            name="setup_animation_tree",
+            description="Create an AnimationTree node and wire it to an AnimationPlayer. Sets up a StateMachine or BlendTree root and activates the tree. Essential for 3D character animations.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "player_path":   {"type": "string", "description": "Path to the AnimationPlayer to drive (default: 'AnimationPlayer')"},
+                    "parent_path":   {"type": "string", "description": "Parent node path (default: scene root)"},
+                    "tree_type":     {"type": "string", "description": "Root node type: state_machine (default) or blend_tree"},
+                    "tree_name":     {"type": "string", "description": "Name for the AnimationTree node (default: 'AnimationTree')"}
+                }
+            }
+        ),
+        Tool(
+            name="add_state_to_machine",
+            description="Add an animation state to an AnimationNodeStateMachine. Node types: animation (plays an animation), state_machine (sub-machine), blend_space_1d, blend_space_2d.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tree_path":       {"type": "string", "description": "Path to AnimationTree node"},
+                    "state_name":      {"type": "string", "description": "Name for the new state"},
+                    "animation_name":  {"type": "string", "description": "Animation to play in this state (for 'animation' node type)"},
+                    "node_type":       {"type": "string", "description": "animation / state_machine / blend_space_1d / blend_space_2d (default: animation)"},
+                    "position_x":      {"type": "number", "description": "Graph position X"},
+                    "position_y":      {"type": "number", "description": "Graph position Y"}
+                },
+                "required": ["state_name"]
+            }
+        ),
+        Tool(
+            name="connect_states",
+            description="Add a transition between two states in an AnimationNodeStateMachine. Switch modes: immediate, sync, at_end.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tree_path":    {"type": "string",  "description": "Path to AnimationTree node"},
+                    "from_state":   {"type": "string",  "description": "Source state name"},
+                    "to_state":     {"type": "string",  "description": "Destination state name"},
+                    "switch_mode":  {"type": "string",  "description": "immediate / sync / at_end (default: immediate)"},
+                    "auto_advance": {"type": "boolean", "description": "Auto-advance when condition is met (default: false)"}
+                },
+                "required": ["from_state", "to_state"]
+            }
+        ),
+        Tool(
+            name="set_blend_parameter",
+            description="Set a parameter on an AnimationTree (e.g. blend position for locomotion blend spaces). Use path like 'parameters/BlendSpace2D/blend_position' with value [x, y].",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tree_path":       {"type": "string", "description": "Path to AnimationTree node"},
+                    "parameter_path":  {"type": "string", "description": "Full parameter path, e.g. 'parameters/BlendSpace2D/blend_position'"},
+                    "value":           {"description": "Parameter value (number, bool, or [x,y] / [x,y,z] array for blend positions)"}
+                },
+                "required": ["parameter_path", "value"]
+            }
+        ),
+        Tool(
+            name="travel_to_state",
+            description="Trigger an AnimationNodeStateMachinePlayback.travel() to smoothly transition to a target state. The scene must be playing and AnimationTree must be active.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "tree_path":       {"type": "string", "description": "Path to AnimationTree node"},
+                    "target_state":    {"type": "string", "description": "Name of the state to travel to"},
+                    "playback_param":  {"type": "string", "description": "Parameter path to playback (default: 'parameters/playback')"}
+                },
+                "required": ["target_state"]
+            }
+        ),
     ]
 
 
@@ -1457,6 +1750,28 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
 
         # Profiler snapshot
         "get_profiler_snapshot": "/api/runtime/profiler_snapshot",
+
+        # Animation tools
+        "get_animation_player_info":  "/api/animation/player_info",
+        "create_animation":           "/api/animation/create",
+        "get_animation_info":         "/api/animation/info",
+        "set_animation_properties":   "/api/animation/set_properties",
+        "delete_animation":           "/api/animation/delete",
+        "add_animation_track":        "/api/animation/track/add",
+        "remove_animation_track":     "/api/animation/track/remove",
+        "set_track_path":             "/api/animation/track/set_path",
+        "get_track_info":             "/api/animation/track/info",
+        "set_track_interpolation":    "/api/animation/track/set_interp",
+        "add_keyframe":               "/api/animation/keyframe/add",
+        "remove_keyframe":            "/api/animation/keyframe/remove",
+        "set_keyframe_value":         "/api/animation/keyframe/set_value",
+        "set_keyframe_time":          "/api/animation/keyframe/set_time",
+        "get_keyframes":              "/api/animation/keyframe/list",
+        "setup_animation_tree":       "/api/animation/tree/setup",
+        "add_state_to_machine":       "/api/animation/tree/add_state",
+        "connect_states":             "/api/animation/tree/connect_states",
+        "set_blend_parameter":        "/api/animation/tree/set_blend",
+        "travel_to_state":            "/api/animation/tree/travel",
     }
     
     # ── Export tools (Python subprocess, no Godot HTTP needed) ───────────────

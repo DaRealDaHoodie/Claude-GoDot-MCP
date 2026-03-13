@@ -10,7 +10,7 @@ Tell Claude "build a full 2D platformer with double-jump, 3 enemy types, coins, 
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server that gives Claude direct, real-time control over the Godot editor:
 
-- **85 tools** covering every aspect of Godot development
+- **105 tools** covering every aspect of Godot development
 - **Scene & node operations** — create, edit, save, delete, reorder, rename, bake navigation
 - **Script operations** — create, edit, attach GDScript files
 - **Signal wiring** — connect/disconnect signals between nodes programmatically
@@ -136,7 +136,7 @@ Create an NPC interaction system:
 
 ---
 
-## Tool Reference (85 tools)
+## Tool Reference (105 tools)
 
 ### Scene Operations
 | Tool | Description |
@@ -274,6 +274,42 @@ Create an NPC interaction system:
 | Tool | Description |
 |------|-------------|
 | `scan_broken_resources` | Walk all .tscn/.tres files, find every `res://` reference that no longer exists on disk |
+
+### Animation — Library & Resource
+| Tool | Description |
+|------|-------------|
+| `get_animation_player_info` | List all libraries/animations in an AnimationPlayer with length, loop mode, track counts |
+| `create_animation` | Create a new Animation resource in a library (set length, loop mode, step) |
+| `get_animation_info` | Get length, loop mode, step, and full track list for an animation |
+| `set_animation_properties` | Set length, loop_mode, and/or step on an existing animation |
+| `delete_animation` | Remove an animation from a library |
+
+### Animation — Track Management
+| Tool | Description |
+|------|-------------|
+| `add_animation_track` | Add a track (value/position_3d/rotation_3d/scale_3d/blend_shape/method/bezier/audio) |
+| `remove_animation_track` | Remove a track by index |
+| `set_track_path` | Change the NodePath:property target of a track |
+| `get_track_info` | Full track info + all keyframes with time/value/transition |
+| `set_track_interpolation` | Set interpolation mode: nearest/linear/cubic/linear_angle/cubic_angle |
+
+### Animation — Keyframe Management
+| Tool | Description |
+|------|-------------|
+| `add_keyframe` | Insert keyframe at time T — arrays auto-coerced to Vector3/Quaternion/Color by track type |
+| `remove_keyframe` | Remove by key_index or nearest time |
+| `set_keyframe_value` | Update value of an existing keyframe |
+| `set_keyframe_time` | Move a keyframe to a new time position |
+| `get_keyframes` | List all keyframes on a track (time, value, transition) |
+
+### Animation — AnimationTree & State Machine
+| Tool | Description |
+|------|-------------|
+| `setup_animation_tree` | Create AnimationTree wired to an AnimationPlayer with StateMachine or BlendTree root |
+| `add_state_to_machine` | Add a state (animation/sub-machine/blend_space_1d/blend_space_2d) to a StateMachine |
+| `connect_states` | Add a transition between two states (immediate/sync/at_end) |
+| `set_blend_parameter` | Set `parameters/xxx` on an AnimationTree (blend positions, etc.) |
+| `travel_to_state` | Call `playback.travel(target)` to transition to a state at runtime |
 
 ---
 
