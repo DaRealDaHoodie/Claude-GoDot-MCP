@@ -115,9 +115,16 @@ Installed 29 packages in Xs
 
 ### Using Test Script
 
+**macOS/Linux**:
 ```bash
 cd godot-mcp-enhanced/python
-python test_connection.py
+.venv/bin/python test_connection.py
+```
+
+**Windows**:
+```bash
+cd godot-mcp-enhanced/python
+.venv\Scripts\python.exe test_connection.py
 ```
 
 **Expected Output**:
