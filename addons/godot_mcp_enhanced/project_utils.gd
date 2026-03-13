@@ -199,14 +199,37 @@ func set_node_global_transform(params: Dictionary) -> Dictionary:
 
 func toggle_feature_tag(params: Dictionary) -> Dictionary:
 	"""Add or remove a custom feature tag in project settings (application/config/features).
-	   Feature tags can be queried at runtime with OS.has_feature('tag_name')."""
+	   Feature tags can be queried at runtime with OS.has_feature('tag_name').
+	   Writes directly to project.godot for reliable persistence (ProjectSettings.set_setting
+	   does not reliably persist config/features in Godot 4.x editor context)."""
 	var tag     = params.get("tag", "")
 	var enabled = bool(params.get("enabled", true))
 
 	if tag == "":
 		return {"success": false, "error": "tag is required"}
 
-	var features = Array(PackedStringArray(ProjectSettings.get_setting("application/config/features", PackedStringArray())))
+	# Read project.godot directly for accurate current state
+	var project_file = ProjectSettings.globalize_path("res://project.godot")
+	var fa = FileAccess.open(project_file, FileAccess.READ)
+	if not fa:
+		return {"success": false, "error": "Cannot open project.godot for reading"}
+	var content = fa.get_as_text()
+	fa.close()
+
+	# Parse current features from file using regex
+	var regex = RegEx.new()
+	regex.compile('config/features=PackedStringArray\\(([^)]*)\\)')
+	var m = regex.search(content)
+	var features: Array = []
+	if m:
+		var inner = m.get_string(1)
+		for part in inner.split(", "):
+			var clean = part.strip_edges().trim_prefix('"').trim_suffix('"')
+			if clean != "":
+				features.append(clean)
+	else:
+		# Fall back to in-memory if not found in file
+		features = Array(PackedStringArray(ProjectSettings.get_setting("application/config/features", PackedStringArray())))
 
 	var changed = false
 	if enabled and not tag in features:
@@ -217,8 +240,20 @@ func toggle_feature_tag(params: Dictionary) -> Dictionary:
 		changed = true
 
 	if changed:
-		ProjectSettings.set_setting("application/config/features", PackedStringArray(features))
-		ProjectSettings.save()
+		# Rebuild features line and write directly to project.godot
+		var quoted: Array = []
+		for f in features:
+			quoted.append('"%s"' % f)
+		var new_line = "config/features=PackedStringArray(%s)" % ", ".join(quoted)
+		if m:
+			content = content.replace(m.get_string(0), new_line)
+		else:
+			content = content.replace("[application]", "[application]\n" + new_line)
+		var fw = FileAccess.open(project_file, FileAccess.WRITE)
+		if not fw:
+			return {"success": false, "error": "Cannot write to project.godot"}
+		fw.store_string(content)
+		fw.close()
 
 	print("[Project] toggle_feature_tag '%s' → %s (changed=%s)" % [tag, str(enabled), str(changed)])
 	return {

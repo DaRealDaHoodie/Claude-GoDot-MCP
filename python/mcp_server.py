@@ -2868,7 +2868,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
 
     if name == "get_export_presets":
         import configparser
-        project_path = arguments.get("project_path", os.getcwd())
+        project_path = arguments.get("project_path") or (_godot_project_path if _godot_project_path else os.getcwd())
         presets_path = os.path.join(project_path, "export_presets.cfg")
 
         if not os.path.exists(presets_path):
@@ -2974,7 +2974,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent | ImageConten
         preset_name = arguments.get("preset_name", "")
         platform     = arguments.get("platform", "")
         export_path  = arguments.get("export_path", "")
-        project_path = arguments.get("project_path", os.getcwd())
+        project_path = arguments.get("project_path") or (_godot_project_path if _godot_project_path else os.getcwd())
         runnable     = arguments.get("runnable", True)
         options      = arguments.get("options", {})
 

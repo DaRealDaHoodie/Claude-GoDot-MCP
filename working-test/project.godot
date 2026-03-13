@@ -11,8 +11,13 @@ config_version=5
 [application]
 
 config/name="Working Test"
+run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
+
+[audio]
+
+buses/default_bus_layout="uid://c7uyboi6oj5yf"
 
 [editor_plugins]
 
