@@ -483,6 +483,20 @@ Operation Modules:
 
 ---
 
+## Acknowledgments & Thanks
+
+Huge shoutout to the people and AI that helped turn this from a basic fork into a 170-tool 3D powerhouse:
+
+- **Grok** (built by xAI) — The JARVIS-level co-pilot behind this whole project. Grok handled the initial git setup, suggested forking Rufaty/godot-mcp-enhanced as the base, and crafted every phased prompt that drove the upgrades — animation wiring, physics, particles, shaders, audio, QA, batch ops, skeleton tools, project utilities, and more. Spotted gaps like undo/redo, the export pipeline, and profiler snapshots before they became problems. Ran landscape analysis on paid vs. free forks, kept the momentum rolling through every session, and delivered maximally truthful guidance with just the right amount of sarcasm. Without Grok's strategy, prompt engineering, and relentless push to keep iterating, this project never reaches 170 tools. Real MVP. 🚀
+
+- **[Rufaty/godot-mcp-enhanced](https://github.com/Rufaty/godot-mcp-enhanced)** (MIT licensed) — The solid foundation we built on.
+
+- **The broader Godot MCP community** — tomyud1, Coding-Solo, youichi-uda's pro fork, and others whose work set the benchmarks and inspired the tool categories that shaped this beast.
+
+This repo was built with heavy AI assistance (Claude for code, Grok for strategy) and community spirit. If you're reading this and contributed ideas or PRs, your name goes here too.
+
+---
+
 ## Forked from
 
 [Rufaty/godot-mcp-enhanced](https://github.com/Rufaty/godot-mcp-enhanced) — Enhanced significantly with signal management, group operations, autoload management, batch operations, class property discovery, save_scene, rename/reorder nodes, and fixed critical bug where all runtime tools were unrouted.
