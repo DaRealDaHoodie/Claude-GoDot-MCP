@@ -1,5 +1,6 @@
 # Claude Code settings (per-project, not shared)
 .claude/
+.mcp.json
 
 # Working test project (local development only)
 working-test/
